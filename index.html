@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VKS – Quản Lý Tin Báo Tội Phạm</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#231f42;--navy-mid:#2f2a57;--navy-lite:#3d376e;
+  --blue:#5b8def;--blue-lite:#76a1f7;
+  --gold:#231f42;--gold-lite:#373166;
+  --bg:#eef1fa;--white:#ffffff;--border:#e4e9f5;
+  --text:#1f1d36;--muted:#7b849e;
+  --success:#2ca574;--danger:#e05252;--warn:#eb7d4b;--pending:#8267f0;
+  --pastel-blue:#d2ebff;--pastel-purple:#e5dfff;--pastel-peach:#ffd8cc;--pastel-mint:#d4f5e5;
+  --shadow-sm:0 4px 16px rgba(35,31,66,.04);
+  --shadow:0 10px 30px rgba(35,31,66,.06);
+  --shadow-lg:0 18px 46px rgba(35,31,66,.12);
+  --sidebar-w:268px;
+}
+body{font-family:'Plus Jakarta Sans','Inter',sans-serif;background:linear-gradient(135deg,#dfe5f5 0%,#eef1fa 48%,#e5e9f7 100%);background-attachment:fixed;color:var(--text);min-height:100vh;font-size:13.5px}
+
+/* SIDEBAR — PASTEL GLASS CARD */
+.sidebar{position:fixed;top:14px;bottom:14px;left:14px;width:calc(var(--sidebar-w) - 14px);background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.9);border-radius:24px;display:flex;flex-direction:column;z-index:100;box-shadow:0 14px 40px rgba(35,31,66,.08);overflow-y:auto}
+.sidebar-brand{padding:20px 18px 16px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#f6f8fe,#edeaff)}
+.brand-row{display:flex;align-items:center;gap:12px}
+.brand-seal{width:46px;height:46px;border-radius:16px;background:linear-gradient(135deg,#231f42,#483f82);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;box-shadow:0 6px 16px rgba(35,31,66,.2)}
+.brand-text .name{font-weight:800;font-size:13.5px;color:var(--navy);line-height:1.25;letter-spacing:-.2px}
+.brand-text .sub{font-size:9.5px;font-weight:700;color:#8267f0;letter-spacing:.7px;text-transform:uppercase;margin-top:3px}
+.btn-add-nav{margin:14px 14px 6px;display:flex;align-items:center;justify-content:center;gap:7px;background:var(--navy);color:#fff;border:none;border-radius:999px;padding:11px 16px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .18s;width:calc(100% - 28px);box-shadow:0 6px 18px rgba(35,31,66,.22)}
+.btn-add-nav:hover{background:var(--navy-lite);transform:translateY(-1px)}
+.nav-group{padding:6px 12px 4px}
+.nav-group-label{font-size:9.5px;font-weight:800;color:#9aa3bd;letter-spacing:1.2px;text-transform:uppercase;padding:6px 10px 4px;display:block}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:16px;cursor:pointer;color:#555e7b;font-size:12.5px;font-weight:600;transition:all .18s;border:none;background:none;width:100%;text-align:left;margin-bottom:3px;font-family:inherit}
+.nav-item:hover{background:#f2f4fc;color:var(--navy)}
+.nav-item.active{background:var(--navy);color:#fff;box-shadow:0 8px 20px rgba(35,31,66,.2)}
+.ni-icon{width:32px;height:32px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:#f0f3fb}
+.nav-item.active .ni-icon{background:rgba(255,255,255,.16)}
+.ni-label{flex:1;line-height:1.3}
+.ni-sub{font-size:10px;opacity:.68;display:block;margin-top:1px;font-weight:500}
+.ni-count{background:#eef1fa;color:#4e5775;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;min-width:26px;text-align:center}
+.nav-item.active .ni-count{background:#ffd8cc;color:#231f42}
+.sidebar-footer{margin-top:auto;padding:12px 16px;border-top:1px solid var(--border);font-size:10.5px;color:var(--muted);text-align:center;line-height:1.6}
+
+/* MAIN */
+.main{margin-left:var(--sidebar-w);min-height:100vh;display:flex;flex-direction:column;padding:14px 18px 18px 8px}
+.topbar{min-height:64px;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.95);border-radius:22px;display:flex;align-items:center;justify-content:space-between;padding:12px 22px;position:sticky;top:14px;z-index:50;box-shadow:var(--shadow);flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.topbar-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.topbar-icon{width:40px;height:40px;border-radius:14px;background:var(--pastel-purple);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:800;color:var(--navy);letter-spacing:-.2px}
+.topbar-sub{font-size:11.5px;color:var(--muted);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.page-pill{font-size:11px;font-weight:700;padding:4px 12px;border-radius:999px;margin-left:4px}
+.pp-blue{background:var(--pastel-blue);color:#184980}.pp-green{background:var(--pastel-mint);color:#14593c}
+.pp-amber{background:var(--pastel-peach);color:#7c2d12}.pp-purple{background:var(--pastel-purple);color:#46288a}
+.content{padding:0 2px;flex:1}
+
+/* STAT CARDS — TASKLYN PASTEL BLOCKS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.stat-card{background:var(--white);border-radius:22px;padding:20px 22px;box-shadow:var(--shadow);display:flex;flex-direction:column;justify-content:space-between;min-height:142px;overflow:hidden;position:relative;cursor:pointer;transition:transform .18s,box-shadow .18s;border:2px solid rgba(255,255,255,.85)}
+.stat-card:nth-child(1){background:linear-gradient(145deg,#cde8ff 0%,#dcf0ff 100%)}
+.stat-card:nth-child(2){background:linear-gradient(145deg,#cff5e3 0%,#e0faee 100%)}
+.stat-card:nth-child(3){background:linear-gradient(145deg,#ffd6c8 0%,#ffe3d8 100%)}
+.stat-card:nth-child(4){background:linear-gradient(145deg,#e3dcff 0%,#ede8ff 100%)}
+.stat-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.sc-bar{display:inline-flex;align-items:center;width:auto;height:auto;background:rgba(255,255,255,.78)!important;padding:4px 11px;border-radius:999px;font-size:10px;font-weight:700;color:var(--navy);align-self:flex-start;margin:0 0 12px 0;backdrop-filter:blur(4px)}
+.stat-card:nth-child(1) .sc-bar::after{content:"Tổng hồ sơ"}
+.stat-card:nth-child(2) .sc-bar::after{content:"Hoàn thành"}
+.stat-card:nth-child(3) .sc-bar::after{content:"Đang thụ lý"}
+.stat-card:nth-child(4) .sc-bar::after{content:"Tạm dừng"}
+.sc-body{flex:1;z-index:1}
+.sc-val{font-size:34px;font-weight:800;color:var(--navy);line-height:1.05;letter-spacing:-.8px}
+.sc-lbl{font-size:13px;font-weight:700;color:#373554;margin-top:6px;line-height:1.3}
+.sc-bg{position:absolute;right:16px;top:16px;transform:none;width:40px;height:40px;border-radius:14px;background:rgba(255,255,255,.65);display:flex;align-items:center;justify-content:center;font-size:20px;opacity:1;pointer-events:none;box-shadow:0 4px 12px rgba(35,31,66,.06)}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px}
+.chart-card{background:rgba(255,255,255,.94);border:1px solid rgba(255,255,255,.95);border-radius:22px;box-shadow:var(--shadow);padding:18px 20px}
+.chart-title{font-size:13px;font-weight:800;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.chart-canvas-wrap{position:relative;height:185px}
+
+/* WARN PANEL */
+.warn-panel{background:rgba(255,255,255,.94);border:1px solid rgba(255,255,255,.95);border-radius:22px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.warn-panel-head{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:var(--navy);background:linear-gradient(90deg,#fff7f3,#fff)}
+.warn-list{max-height:200px;overflow-y:auto}
+.warn-row{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid #f2f5fc;font-size:12.5px;transition:background .14s}
+.warn-row:last-child{border-bottom:none}
+.warn-row:hover{background:#f7f9ff}
+.warn-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.wd-red{background:#f06262}.wd-orange{background:#f58d54}.wd-yellow{background:#f3ba4a}.wd-green{background:#43b888}.wd-purple{background:#9378f7}
+.warn-stt{color:var(--muted);font-size:11px;font-weight:700;min-width:30px}
+.warn-name{flex:1;font-weight:600;color:var(--text)}
+.warn-days{font-size:11.5px;font-weight:700;min-width:120px;text-align:right}
+.days-red{color:#dc2626}.days-orange{color:#ea580c}.days-yellow{color:#ca8a04}.days-green{color:#16a34a}.days-purple{color:#6d28d9}
+
+/* TABLE */
+.table-card{background:rgba(255,255,255,.96);border:1px solid rgba(255,255,255,.95);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.toolbar{padding:15px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:#fcfdff;flex-wrap:wrap}
+.section-label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--navy)}
+.sec-dot{width:10px;height:10px;border-radius:50%}
+.sd-blue{background:#5b8def}.sd-green{background:#43b888}.sd-warn{background:#f58d54}.sd-purple{background:#8267f0}
+.toolbar-r{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:6px;background:#f3f5fc;border:1px solid var(--border);border-radius:999px;padding:7px 13px;min-width:195px}
+.search-box input{border:none;background:none;font-family:inherit;font-size:12.5px;color:var(--text);outline:none;width:100%}
+.fsel{border:1px solid var(--border);border-radius:999px;padding:7px 12px;font-family:inherit;font-size:12px;font-weight:600;color:#414866;background:#f3f5fc;outline:none;cursor:pointer;transition:all .15s}
+.fsel:hover{background:#eaeeff;border-color:#c9d3f2}
+.tbl-wrap{overflow:auto;max-height:calc(100vh - 210px)}
+table{width:100%;border-collapse:collapse}
+thead th{background:#f2f4fc;color:#4d5675;padding:11px 12px;text-align:left;font-weight:800;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;position:sticky;top:0;z-index:6;border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid #eef1f9;transition:background .14s}
+tbody tr:hover{background:#f4f7ff!important}
+#tblBody tr{cursor:pointer}
+th.act-th{position:sticky;right:0;z-index:7;background:#f2f4fc;box-shadow:-5px 0 8px -4px rgba(35,31,66,.12)}
+td.act-cell{position:sticky;right:0;z-index:4;background:#fff;box-shadow:-5px 0 8px -4px rgba(35,31,66,.08);white-space:nowrap}
+.chip-row{display:none;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 18px;border-bottom:1px solid var(--border);background:#f2f8ff}
+.chip-row.show{display:flex}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:600;border-radius:20px;padding:3px 6px 3px 11px;line-height:1.4}
+.chip b{font-weight:700}
+.chip-x{background:rgba(29,78,216,.12);border:none;color:#1d4ed8;width:16px;height:16px;border-radius:50%;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .15s}
+.chip-x:hover{background:#1d4ed8;color:#fff}
+.chip-clear{background:none;border:none;color:var(--danger);font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;padding:3px 8px;border-radius:6px}
+.chip-clear:hover{background:#fee2e2}
+.dt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+.dt-item.full{grid-column:1/-1}
+.dt-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px}
+.dt-val{font-size:13px;font-weight:600;color:var(--text);line-height:1.5}
+.dt-val.muted{color:var(--muted);font-weight:400}
+.dt-sec{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:6px 0 -2px}
+.dt-sec span{font-size:10.5px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.dt-sec::before,.dt-sec::after{content:'';flex:1;height:1px;background:var(--border)}
+.dt-dlbox{grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.dt-dlbox .dl-bar{height:8px;border-radius:4px}
+.dt-dlbox .dl-fill{border-radius:4px}
+.tl{grid-column:1/-1;display:flex;flex-direction:column;gap:0;margin-top:2px}
+.tl-item{display:flex;gap:12px;position:relative;padding-bottom:14px}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:'';position:absolute;left:9px;top:20px;bottom:0;width:2px;background:var(--border)}
+.tl-item:last-child::before{display:none}
+.tl-dot{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;z-index:1;color:#fff;font-weight:700}
+.tl-dot.td{background:var(--pending)}.tl-dot.ph{background:var(--success)}
+.tl-body{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:8px 12px}
+.tl-title{font-size:12px;font-weight:700}
+.tl-title.td{color:var(--pending)}.tl-title.ph{color:var(--success)}
+.tl-meta{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5}
+tbody td{padding:8px 11px;vertical-align:middle}
+.t-xs{max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-sm{max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-md{max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-lg{max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-c{text-align:center;font-weight:700;color:var(--muted);font-size:12px}
+
+/* DEADLINE CELL */
+.dl-cell{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:11.5px;font-weight:600}
+.dl-bar{height:4px;border-radius:2px;flex:1;min-width:30px;background:#e2e8f0}
+.dl-fill{height:100%;border-radius:2px}
+.dl-ok{background:#22c55e}.dl-warn{background:#eab308}.dl-near{background:#f97316}.dl-over{background:#ef4444}
+/* MONTH ROW COLORS */
+tr.month-namtruoc td{background:#f5f0ff!important}
+tr.month-10 td{background:#fff7e6!important}
+tr.month-11 td{background:#e6f7ff!important}
+tr.month-12 td{background:#fff0f0!important}
+tr.month-1 td{background:#f0fff4!important}
+tr.month-2 td{background:#fffde7!important}
+tr.month-3 td{background:#fce4ec!important}
+tr.month-4 td{background:#e8f5e9!important}
+tr.month-5 td{background:#e3f2fd!important}
+tr.month-6 td{background:#fff3e0!important}
+tr.month-7 td{background:#f3e5f5!important}
+tr.month-8 td{background:#e0f7fa!important}
+tr.month-9 td{background:#fafafa!important}
+tr.row-over td{background:#fff5f5!important}
+tr.row-near td{background:#fffbeb!important}
+tr.row-phuchoi td{background:#dbeafe!important;border-left:3px solid #2563eb!important}
+
+/* MONTH LEGEND */
+.month-legend{display:flex;flex-wrap:wrap;gap:6px;padding:8px 18px;border-bottom:1px solid var(--border);background:#fafcff}
+.ml-item{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:500;color:var(--text)}
+.ml-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;white-space:nowrap}
+.b-blue{background:#d6ebff;color:#184980}.b-teal{background:#cff7ef;color:#0e5f58}
+.b-gray{background:#edf0f8;color:#4a536d}.b-green{background:#d4f5e5;color:#14593c}
+.b-red{background:#ffe0e0;color:#9e1c1c}.b-amber{background:#ffeacc;color:#8c4608}
+.b-purple{background:#e5dfff;color:#46288a}.b-orange{background:#ffddd2;color:#822f15}
+.b-pink{background:#fde2f1;color:#8a1855}.b-navy{background:#dbeafe;color:#1e3a5f}
+
+/* BUTTONS — PILL TASKLYN STYLE */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .17s;white-space:nowrap;line-height:1}
+.btn-primary{background:var(--navy);color:#fff;box-shadow:0 4px 12px rgba(35,31,66,.18)}.btn-primary:hover{background:var(--navy-lite);transform:translateY(-1px)}
+.btn-gold{background:var(--navy);color:#fff;box-shadow:0 6px 16px rgba(35,31,66,.22)}.btn-gold:hover{background:var(--navy-lite);transform:translateY(-1px)}
+.btn-danger{background:#ffe0e0;color:#b91c1c}.btn-danger:hover{background:#fecaca}
+.btn-ghost{background:#f4f6fc;border:1px solid var(--border);color:#424966}.btn-ghost:hover{border-color:#b8c4ec;color:var(--navy);background:#e9edfb}
+.btn-sm2{background:#f4f6fc;border:1px solid var(--border);color:var(--text);border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.btn-sm2:hover{border-color:var(--blue);color:var(--blue)}
+.btn-xs{padding:4px 9px;font-size:11px;border-radius:999px;gap:3px}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(35,31,66,.42);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:20px}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:24px;width:100%;max-width:820px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:rise .22s cubic-bezier(.16,1,.3,1);border:1px solid rgba(255,255,255,.9)}
+.modal-sm{max-width:480px}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+.modal-head{padding:18px 24px;background:linear-gradient(135deg,#e3dcff 0%,#d2ebff 100%);display:flex;align-items:center;justify-content:space-between;border-radius:24px 24px 0 0;border-bottom:1px solid var(--border)}
+.modal-head-title{color:var(--navy)!important;font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.modal-x{background:rgba(255,255,255,.7);border:none;color:var(--navy)!important;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.modal-x:hover{background:#fff}
+.modal-body{padding:22px 24px}
+.modal-foot{padding:14px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:#fafbff;border-radius:0 0 24px 24px}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fg-full{grid-column:1/-1}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11.5px;font-weight:700;color:var(--navy)}
+.fg label .r{color:var(--danger)}
+.fc{border:1.5px solid var(--border);border-radius:12px;padding:8px 12px;font-family:inherit;font-size:12.5px;color:var(--text);background:#fafbff;outline:none;transition:border-color .18s,background .18s,box-shadow .18s}
+.fc:focus{border-color:#8267f0;background:#fff;box-shadow:0 0 0 3px rgba(130,103,240,.14)}
+textarea.fc{resize:vertical;min-height:72px}
+select.fc{background:#fafbff;cursor:pointer}
+.form-sep{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:6px 0}
+.form-sep span{font-size:10.5px;font-weight:800;color:#8267f0;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.form-sep::before,.form-sep::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* DEADLINE HINT */
+.dl-hint{font-size:11px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px}
+.dl-hint.warn{color:var(--warn);font-weight:600}
+.dl-hint.over{color:var(--danger);font-weight:700}
+
+/* QĐ ROW (gia hạn) */
+.qd-row{display:flex;gap:8px;align-items:center}
+.qd-so{flex:0 0 130px}
+.dp-wrap{position:relative;flex:1}
+.qd-ngay{width:100%;cursor:pointer;padding-right:32px!important;background:#fff}
+.dp-icon{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:15px;cursor:pointer;user-select:none}
+
+/* TD/PH LIST (nhiều QĐ) */
+.tdph-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.tdph-item{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:8px 10px}
+.tdph-type{font-size:11px;font-weight:700;min-width:90px}
+.tdph-type.td{color:var(--pending)}.tdph-type.ph{color:var(--success)}
+.tdph-so{border:none;border-bottom:1.5px solid var(--border);background:transparent;font-family:inherit;font-size:12px;color:var(--text);outline:none;width:90px;padding:2px 4px}
+.tdph-ngay{border:none;border-bottom:1.5px solid var(--border);background:transparent;font-family:inherit;font-size:12px;color:var(--text);outline:none;flex:1;padding:2px 4px;cursor:pointer}
+.tdph-del{background:none;border:none;color:#aaa;cursor:pointer;font-size:16px;line-height:1;padding:0 2px;transition:color .15s}
+.tdph-del:hover{color:var(--danger)}
+.tdph-add-row{display:flex;gap:8px}
+
+/* YÊU CẦU / KẾT QUẢ (chọn + số + ngày) */
+.ykq-block{grid-column:1/-1;display:flex;flex-direction:column;gap:8px}
+.ykq-select-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ykq-detail{display:none;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;gap:10px;flex-wrap:wrap;align-items:center}
+.ykq-detail.show{display:flex}
+.ykq-detail label{font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap}
+.ykq-detail .dp-wrap{flex:1;min-width:140px}
+
+/* DATEPICKER */
+.dp-popup{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:600;background:var(--white);border:1.5px solid var(--border);border-radius:16px;box-shadow:0 12px 36px rgba(35,31,66,.16);width:264px;padding:12px;animation:dpIn .18s ease;font-family:inherit}
+.dp-popup.open{display:block}
+@keyframes dpIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.dp-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.dp-nav-btn{background:none;border:1px solid var(--border);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--text)}
+.dp-nav-btn:hover{background:var(--bg)}
+.dp-month-label{font-size:13px;font-weight:700;color:var(--navy)}
+.dp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
+.dp-wd{text-align:center;font-size:10px;font-weight:700;color:var(--muted);padding:2px 0}
+.dp-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dp-day{text-align:center;padding:5px 2px;font-size:12px;border-radius:8px;cursor:pointer;color:var(--text);transition:background .12s;user-select:none}
+.dp-day:hover:not(.dp-empty){background:var(--bg)}
+.dp-empty{pointer-events:none;color:transparent}
+.dp-today{color:#8267f0;font-weight:700}
+.dp-sel{background:var(--navy)!important;color:#fff!important;font-weight:700}
+.dp-footer{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between}
+.dp-btn-clear{font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 4px;border-radius:4px}
+.dp-btn-clear:hover{color:var(--danger)}
+.dp-btn-today{font-size:11px;color:#8267f0;background:none;border:none;cursor:pointer;font-family:inherit;font-weight:700;padding:2px 8px;border-radius:4px}
+.dp-btn-today:hover{background:#ede8ff}
+
+/* PAGER */
+.pager{display:flex;align-items:center;gap:6px;padding:14px 20px;justify-content:flex-end;border-top:1px solid var(--border);flex-wrap:wrap}
+.pager-info{font-size:11.5px;color:var(--muted);margin-right:4px}
+.pb{width:32px;height:32px;border-radius:10px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;transition:all .13s;color:var(--text);font-family:inherit}
+.pb:hover:not(:disabled){border-color:#8267f0;color:#8267f0}
+.pb.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.pb:disabled{opacity:.35;cursor:default}
+.empty{text-align:center;padding:54px 20px;color:var(--muted)}
+.empty .ei{font-size:42px;opacity:.35;margin-bottom:10px}
+.empty p{font-size:13px}
+
+/* TOAST & LOADER */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:999px;font-size:12.5px;font-weight:700;box-shadow:0 10px 30px rgba(35,31,66,.22);z-index:999;display:none;align-items:center;gap:7px}
+.toast.show{display:flex}
+.toast.ok{background:var(--navy);color:#fff}.toast.err{background:var(--danger);color:#fff}
+.loader{display:none;position:fixed;inset:0;background:rgba(35,31,66,.35);backdrop-filter:blur(4px);z-index:999;align-items:center;justify-content:center}
+.loader.show{display:flex}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid rgba(255,255,255,.35);border-top-color:var(--navy);animation:rot .75s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* THỐNG KÊ THÁNG */
+.tk-panel{background:rgba(255,255,255,.96);border-radius:22px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden;display:none;border:1px solid rgba(255,255,255,.95)}
+.tk-panel.show{display:block}
+.tk-head{padding:16px 22px;background:linear-gradient(135deg,#e3dcff 0%,#d2ebff 100%);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--border)}
+.tk-head-title{color:var(--navy);font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.tk-controls{display:flex;align-items:center;gap:8px}
+.tk-sel{border:1px solid rgba(35,31,66,.14);border-radius:999px;padding:6px 12px;font-family:inherit;font-size:12px;font-weight:600;color:var(--navy);background:rgba(255,255,255,.85);outline:none;cursor:pointer}
+.tk-sel option{color:var(--text);background:#fff}
+.tk-sel::placeholder{color:var(--muted)}
+.tk-sel.loc-on{border-color:#8267f0;background:#ede8ff}
+.btn-tk{background:var(--navy);color:#fff;border:none;border-radius:999px;padding:7px 16px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.btn-tk:hover{background:var(--navy-lite);transform:translateY(-1px)}
+.tkmode{background:rgba(255,255,255,.75);color:var(--muted);border:none;padding:6px 14px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;transition:all .15s}
+.tkmode.on{background:var(--navy);color:#fff}
+.tk-body{padding:20px 22px}
+.tk-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.tk-sm-card{background:var(--bg);border-radius:16px;padding:14px 16px;border-left:4px solid transparent;position:relative}
+.tk-sm-card.c-blue{border-color:var(--blue)}.tk-sm-card.c-green{border-color:var(--success)}
+.tk-sm-card.c-warn{border-color:var(--warn)}.tk-sm-card.c-purple{border-color:var(--pending)}
+.tk-sm-card.c-red{border-color:var(--danger)}.tk-sm-card.c-teal{border-color:#0f766e}
+.tk-sm-card.c-navy{border-color:var(--navy)}
+.tk-sm-val{font-size:28px;font-weight:800;color:var(--navy);line-height:1}
+.tk-sm-lbl{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.4}
+.tk-sm-sub{font-size:10px;color:var(--muted);margin-top:3px}
+.tk-divider{height:1px;background:var(--border);margin:14px 0}
+.tk-detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.tk-det-card{background:#f7f9ff;border-radius:16px;overflow:hidden;border:1px solid var(--border)}
+.tk-det-head{padding:9px 14px;font-size:12px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:6px}
+.tk-det-head.dh-green{background:var(--pastel-mint);color:#14593c}.tk-det-head.dh-red{background:#ffe0e0;color:#9e1c1c}
+.tk-det-head.dh-purple{background:var(--pastel-purple);color:#46288a}.tk-det-head.dh-warn{background:var(--pastel-peach);color:#7c2d12}
+.tk-det-body{padding:8px 0;max-height:170px;overflow-y:auto}
+.tk-det-row{display:flex;align-items:center;gap:8px;padding:6px 14px;font-size:12px;border-bottom:1px solid #eef2f8}
+.tk-det-row:last-child{border-bottom:none}
+.tk-det-stt{font-weight:700;color:var(--muted);font-size:10.5px;min-width:22px}
+.tk-det-name{flex:1;font-weight:600}
+.tk-det-badge{font-size:10px}
+.tk-empty{text-align:center;padding:16px;color:var(--muted);font-size:12px}
+
+/* HẬU QUẢ inline */
+.hauqua-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hq-item{display:flex;flex-direction:column;gap:3px}
+.hq-item label{font-size:11px;font-weight:600;color:var(--muted)}
+.hq-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;padding:3px 9px;border-radius:999px;font-weight:700;white-space:nowrap}
+.hq-red{background:#ffe0e0;color:#b91c1c}
+.cb-label{display:flex;align-items:center;font-size:13px;font-weight:700;color:var(--navy);cursor:pointer;gap:2px;user-select:none}
+.cax-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d6ebff;color:#184980;white-space:nowrap}
+.hq-orange{background:#ffddd2;color:#9a3412}
+.hq-amber{background:#ffeacc;color:#b45309}
+
+/* CHỈ TIÊU & KIẾN NGHỊ PANEL */
+.ct-panel{background:rgba(255,255,255,.96);border-radius:22px;box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden;display:none;border:1px solid rgba(255,255,255,.95)}
+.ct-panel.show{display:block}
+.ct-head{padding:16px 22px;background:linear-gradient(135deg,#e3dcff 0%,#d2ebff 100%);display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border)}
+.ct-head-title{color:var(--navy);font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.ct-tabs{display:flex;gap:4px;background:rgba(255,255,255,.65);border-radius:999px;padding:4px}
+.ct-tab{padding:6px 14px;border-radius:999px;font-size:11.5px;font-weight:700;color:#4f5878;cursor:pointer;border:none;background:none;font-family:inherit;transition:all .15s}
+.ct-tab.on{background:var(--navy);color:#fff;box-shadow:0 4px 12px rgba(35,31,66,.18)}
+.ct-toolbar{padding:12px 20px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);background:#fafcff;flex-wrap:wrap}
+.ct-tbl-wrap{overflow-x:auto}
+.ct-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+.ct-empty .ei{font-size:38px;opacity:.3;margin-bottom:8px}
+.badge-yn-yes{background:var(--pastel-mint);color:#14593c;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700}
+.badge-yn-no{background:#ffe0e0;color:#b91c1c;padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700}
+.badge-ct{padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700}
+.bct-yeucaukt{background:var(--pastel-blue);color:#184980}
+.bct-quache{background:var(--pastel-purple);color:#46288a}
+.bct-kstt{background:#ffeacc;color:#92400e}
+.bct-ycph{background:var(--pastel-blue);color:#1e40af}
+.bct-phongngua{background:var(--pastel-mint);color:#14593c}
+.bct-vipham{background:var(--pastel-peach);color:#9a3412}
+
+/* MODAL FORMS */
+.overlay-inner{padding:20px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fg-2{grid-column:span 2}
+.fg-3{grid-column:1/-1}
+.staff-checkgroup{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:#f5f7fd;border:1.5px solid var(--border);border-radius:14px;max-height:130px;overflow-y:auto}
+.staff-chip{display:flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;cursor:pointer;padding:4px 11px;border-radius:999px;border:1px solid var(--border);background:#fff;transition:all .13s;user-select:none}
+.staff-chip.sel{background:var(--navy);color:#fff;border-color:var(--navy)}
+.staff-chip input{display:none}
+
+/* LOGIN OVERLAY — PASTEL GLASS */
+.login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#d8e2f8 0%,#e9e4ff 50%,#fde2d9 100%);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-screen.hidden{display:none}
+.login-card{background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border:1px solid #fff;border-radius:28px;width:100%;max-width:420px;padding:36px 30px;box-shadow:0 24px 60px rgba(35,31,66,.14);text-align:center}
+.login-seal{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,#231f42,#483f82);display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px;box-shadow:0 10px 24px rgba(35,31,66,.2)}
+.login-title{font-weight:800;font-size:17px;color:var(--navy);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
+</style>
+</head>
+<body>
+
+<!-- MÀN HÌNH ĐĂNG NHẬP BẢO MẬT -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-seal">⚖️</div>
+    <div class="login-title">VIỆN KIỂM SÁT NHÂN DÂN</div>
+    <div class="login-sub">Hệ thống Quản lý Tin báo, Tố giác Tội phạm & Kiến nghị Khởi tố</div>
+    <form onsubmit="event.preventDefault();doLogin()" style="text-align:left;display:flex;flex-direction:column;gap:12px">
+      <div class="fg">
+        <label>Tài khoản</label>
+        <input type="text" class="fc" id="login_user" value="admin" placeholder="admin" required>
+      </div>
+      <div class="fg">
+        <label>Mật khẩu truy cập</label>
+        <input type="password" class="fc" id="login_pass" placeholder="Nhập mật khẩu..." required autofocus>
+      </div>
+      <div id="loginErr" style="display:none;color:var(--danger);font-size:12px;font-weight:600;background:#fef2f2;padding:8px 10px;border-radius:7px;border:1px solid #fecaca"></div>
+      <button type="submit" class="btn btn-gold" style="justify-content:center;padding:11px;font-size:13.5px;margin-top:4px">🔐 Đăng nhập hệ thống</button>
+    </form>
+    <div style="font-size:11px;color:var(--muted);margin-top:16px">Mật khẩu mặc định lần đầu: <b>vks123456</b> (có thể đổi trong mục Cài đặt)</div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-row">
+      <div class="brand-seal">⚖️</div>
+      <div class="brand-text">
+        <div class="name">VIỆN KIỂM SÁT<br>NHÂN DÂN</div>
+        <div class="sub">Quản lý tin báo tội phạm</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn-add-nav" onclick="openAddModal()">＋&nbsp; Thêm tin báo mới</button>
+  <div class="nav-group">
+    <span class="nav-group-label">Danh mục</span>
+    <button class="nav-item active" data-page="tonghop" onclick="navTo('tonghop',this)">
+      <div class="ni-icon">📋</div><div class="ni-label">Tổng hợp các tin</div>
+      <span class="ni-count" id="cnt-tonghop">0</span>
+    </button>
+    <button class="nav-item" data-page="dagiaiquyet" onclick="navTo('dagiaiquyet',this)">
+      <div class="ni-icon">✅</div>
+      <div class="ni-label">Tin đã giải quyết<span class="ni-sub">trong kỳ</span></div>
+      <span class="ni-count" id="cnt-dagiaiquyet">0</span>
+    </button>
+    <button class="nav-item" data-page="dangcho" onclick="navTo('dangcho',this)">
+      <div class="ni-icon">⏳</div>
+      <div class="ni-label">Tin đang chờ<span class="ni-sub">giải quyết</span></div>
+      <span class="ni-count" id="cnt-dangcho">0</span>
+    </button>
+    <button class="nav-item" data-page="tamdinh" onclick="navTo('tamdinh',this)">
+      <div class="ni-icon">⏸️</div><div class="ni-label">Tin tạm đình chỉ</div>
+      <span class="ni-count" id="cnt-tamdinh">0</span>
+    </button>
+    <button class="nav-item" data-page="phuchoi" onclick="navTo('phuchoi',this)">
+      <div class="ni-icon">🔄</div>
+      <div class="ni-label">Tin đã phục hồi<span class="ni-sub">tính như thụ lý mới</span></div>
+      <span class="ni-count" id="cnt-phuchoi">0</span>
+    </button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Báo cáo & Theo dõi</span>
+    <button class="nav-item" data-page="thongke" onclick="navTo('thongke',this)">
+      <div class="ni-icon">📊</div>
+      <div class="ni-label">Thống kê theo tháng<span class="ni-sub">Số liệu tổng hợp định kỳ</span></div>
+    </button>
+    <button class="nav-item" data-page="chitieu" onclick="navTo('chitieu',this)">
+      <div class="ni-icon">🎯</div>
+      <div class="ni-label">Theo dõi chỉ tiêu<span class="ni-sub">Yêu cầu KT, KSTT, Quy chế</span></div>
+      <span class="ni-count" id="cnt-chitieu">0</span>
+    </button>
+    <button class="nav-item" data-page="kiennghi" onclick="navTo('kiennghi',this)">
+      <div class="ni-icon">📝</div>
+      <div class="ni-label">Kiến nghị<span class="ni-sub">Phòng ngừa, vi phạm</span></div>
+      <span class="ni-count" id="cnt-kiennghi">0</span>
+    </button>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Hệ thống & Dữ liệu</span>
+    <button class="nav-item" onclick="openStaffModal()">
+      <div class="ni-icon">👥</div>
+      <div class="ni-label">Danh sách Cán bộ<span class="ni-sub">Phó VT & Kiểm sát viên</span></div>
+    </button>
+    <button class="nav-item" onclick="openDataSyncModal()">
+      <div class="ni-icon">☁️</div>
+      <div class="ni-label">Excel · Sao lưu · Cloud<span class="ni-sub">Đồng bộ nhiều máy & Bảo mật</span></div>
+    </button>
+  </div>
+  <div class="sidebar-footer">Phiên bản 5.0 Standalone · © VKSND</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-icon" id="tbIcon">📋</div>
+      <div>
+        <div class="topbar-title" id="tbTitle">Tổng hợp các tin</div>
+        <div class="topbar-sub" id="tbSub">Toàn bộ tin báo, tố giác tội phạm và kiến nghị khởi tố</div>
+      </div>
+      <span class="page-pill pp-blue" id="tbPill"></span>
+    </div>
+    <div class="topbar-right">
+      <span id="activeYearBadge" onclick="openYearSwitchPrompt()" title="Bấm để chuyển đổi năm làm việc" style="font-size:11px;font-weight:700;padding:5px 10px;background:#e0f2fe;color:#0369a1;border-radius:8px;cursor:pointer;display:none"></span>
+      <button class="btn btn-ghost" onclick="exportExcelFile()" title="Tải về file Excel (.xlsx) đã tô màu nền theo tháng & màu chữ theo trạng thái" style="font-size:11px;padding:6px 10px;color:#15803d;border-color:#86efac;background:#f0fdf4">📥 Xuất Excel</button>
+      <button class="btn btn-ghost" onclick="openDataSyncModal()" title="Nhập dữ liệu từ file Excel (.xlsx) hoặc Google Sheets" style="font-size:11px;padding:6px 10px;color:#0369a1">📤 Nhập Excel / Sao lưu</button>
+      <button class="btn btn-ghost" onclick="openInSoModal()" title="In sổ thụ lý tin báo, tố giác tội phạm khổ A3 ngang" style="font-size:11px;padding:6px 10px;color:#166534">📖 In Sổ</button>
+      <button class="btn btn-ghost" onclick="inSoTDC()" title="In sổ riêng các vụ đã từng tạm đình chỉ — đánh số từ 1" style="font-size:11px;padding:6px 10px;color:#7c3aed">📖 Sổ TĐC</button>
+      <button class="btn btn-ghost" onclick="runTaoSheetTDC()" title="Tạo/đồng bộ sheet theo dõi Tạm đình chỉ riêng" style="font-size:11px;padding:6px 10px;color:#7c3aed">⏸ Sheet TĐC</button>
+      <button class="btn" onclick="openKetThucNam()" style="background:#dc2626;color:#fff;font-size:11px;padding:6px 10px" title="Kết thúc năm, chuyển dữ liệu sang năm mới">🗓️ Kết thúc năm</button>
+      <button class="btn btn-gold" id="btnAddTinBao" onclick="openAddModal()">＋ Thêm tin báo</button>
+      <button class="btn btn-primary" id="btnAddCtieu" onclick="openCtForm()" style="display:none">＋ Thêm chỉ tiêu</button>
+      <button class="btn btn-primary" id="btnAddKn" onclick="openKnForm()" style="display:none">＋ Thêm kiến nghị</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- STAT CARDS -->
+    <div class="stats-grid" id="statCards">
+      <div class="stat-card" onclick="navToKey('tonghop')"><div class="sc-bar scb-blue"></div><div class="sc-body"><div class="sc-val" id="sv-total">0</div><div class="sc-lbl">Tổng tin báo</div></div><div class="sc-bg">📁</div></div>
+      <div class="stat-card" onclick="navToKey('dagiaiquyet')"><div class="sc-bar scb-green"></div><div class="sc-body"><div class="sc-val" id="sv-gq">0</div><div class="sc-lbl">Đã giải quyết</div></div><div class="sc-bg">✅</div></div>
+      <div class="stat-card" onclick="navToKey('dangcho')"><div class="sc-bar scb-warn"></div><div class="sc-body"><div class="sc-val" id="sv-cho">0</div><div class="sc-lbl">Đang chờ giải quyết</div></div><div class="sc-bg">⏳</div></div>
+      <div class="stat-card" onclick="navToKey('tamdinh')"><div class="sc-bar scb-purple"></div><div class="sc-body"><div class="sc-val" id="sv-td">0</div><div class="sc-lbl">Tạm đình chỉ</div></div><div class="sc-bg">⏸️</div></div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-row" id="chartsRow">
+      <div class="chart-card"><div class="chart-title">📊 Kết quả giải quyết</div><div class="chart-canvas-wrap"><canvas id="chartKQ"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">📂 Theo phân loại</div><div class="chart-canvas-wrap"><canvas id="chartPL"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">⚖️ Theo loại tội</div><div class="chart-canvas-wrap"><canvas id="chartLT"></canvas></div></div>
+    </div>
+
+    <!-- WARN PANEL -->
+    <div class="warn-panel" id="warnPanel">
+      <div class="warn-panel-head" style="cursor:pointer" onclick="toggleWarnPanel()">⚠️ Cảnh báo thời hạn <span id="warnCount" style="font-size:11px;color:var(--muted);font-weight:400;margin-left:4px"></span><span id="warnToggle" style="float:right;font-size:10px;color:var(--muted)">▼ Mở rộng</span></div>
+      <div class="warn-list" id="warnList" style="max-height:78px;overflow:hidden;transition:max-height .3s ease"></div>
+    </div>
+
+    <!-- THỐNG KÊ THÁNG -->
+    <div class="tk-panel" id="tkPanel">
+      <div class="tk-head">
+        <div class="tk-head-title">📊 Thống kê tổng hợp theo kỳ</div>
+        <div class="tk-controls" style="flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:0;border:1px solid rgba(35,31,66,.12);border-radius:999px;overflow:hidden;font-size:11px;font-weight:700">
+            <button id="tkMode_thang" class="tkmode on" onclick="switchTkMode('thang')">Theo tháng</button>
+            <button id="tkMode_ngay"  class="tkmode"    onclick="switchTkMode('ngay')">Theo ngày</button>
+          </div>
+          <div id="tkFormThang" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:var(--navy)">Từ</span>
+            <select class="tk-sel" id="tk_thang">
+              <option value="1">Tháng 1</option><option value="2">Tháng 2</option>
+              <option value="3">Tháng 3</option><option value="4">Tháng 4</option>
+              <option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+              <option value="7">Tháng 7</option><option value="8">Tháng 8</option>
+              <option value="9">Tháng 9</option><option value="10">Tháng 10</option>
+              <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+            </select>
+            <select class="tk-sel" id="tk_nam_dau"></select>
+            <span style="font-size:12px;font-weight:700;color:var(--navy)">đến</span>
+            <select class="tk-sel" id="tk_thang_cuoi">
+              <option value="1">Tháng 1</option><option value="2">Tháng 2</option>
+              <option value="3">Tháng 3</option><option value="4">Tháng 4</option>
+              <option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+              <option value="7">Tháng 7</option><option value="8">Tháng 8</option>
+              <option value="9">Tháng 9</option><option value="10">Tháng 10</option>
+              <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+            </select>
+            <select class="tk-sel" id="tk_nam_cuoi"></select>
+          </div>
+          <div id="tkFormNgay" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:700;color:var(--navy)">Từ ngày</span>
+            <input type="date" class="tk-sel" id="tk_ngay_dau" style="font-size:12px;padding:5px 8px">
+            <span style="font-size:12px;font-weight:700;color:var(--navy)">đến ngày</span>
+            <input type="date" class="tk-sel" id="tk_ngay_cuoi" style="font-size:12px;padding:5px 8px">
+          </div>
+          <button class="btn-tk" onclick="loadThongKe()">🔄 Tính toán</button>
+          <button class="btn-tk" style="background:#fff;color:var(--navy);border:1px solid rgba(35,31,66,.15)" onclick="printThongKe()">🖨️ In thống kê</button>
+          <button class="btn-tk" style="background:#dc2626;color:#fff" onclick="downloadThongKePdf()" title="Tải ngay file PDF (.pdf) bảng Báo cáo thống kê về máy">📕 Tải Thống kê (.pdf)</button>
+          <button class="btn-tk" style="background:#16a34a;color:#fff" onclick="downloadThongKeDoc()" title="Tải ngay file Word (.doc) bảng Báo cáo thống kê về máy">📥 Tải Thống kê (.doc)</button>
+          <button class="btn-tk" style="background:#8267f0;color:#fff" onclick="printBaoCaoViet()">📝 Báo cáo viết</button>
+          <button class="btn-tk" style="background:#e11d48;color:#fff" onclick="downloadBaoCaoVietPdf()" title="Tải ngay file PDF (.pdf) Báo cáo viết về máy">📕 Tải Báo cáo (.pdf)</button>
+          <button class="btn-tk" style="background:#0d9488;color:#fff" onclick="downloadBaoCaoVietDoc()" title="Tải ngay file Word (.doc) Báo cáo viết về máy">📥 Tải Báo cáo (.doc)</button>
+        </div>
+        <div id="tkLocRow" style="flex-basis:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:10px;border-top:1px solid rgba(35,31,66,.1)">
+          <span style="font-size:12px;font-weight:800;color:var(--navy)">🔎 Lọc:</span>
+          <select class="tk-sel" id="tkl_phanloai" onchange="danhDauLocTK()"><option value="">Phân loại: Tất cả</option></select>
+          <select class="tk-sel" id="tkl_loaitoi" onchange="danhDauLocTK()"><option value="">Loại tội: Tất cả</option></select>
+          <select class="tk-sel" id="tkl_ksv" onchange="danhDauLocTK()"><option value="">KSV: Tất cả</option></select>
+          <select class="tk-sel" id="tkl_pvt" onchange="danhDauLocTK()"><option value="">PVT: Tất cả</option></select>
+          <select class="tk-sel" id="tkl_cax" onchange="danhDauLocTK()">
+            <option value="">CAX: Tất cả</option><option value="co">Chỉ Công an xã thụ lý</option><option value="khong">Không phải CAX</option>
+          </select>
+          <input class="tk-sel" id="tkl_noi" placeholder="Nơi xảy ra (VD: tên xã)" style="width:170px;cursor:text" oninput="danhDauLocTK()">
+          <button class="btn-tk" style="background:rgba(255,255,255,.75);color:var(--navy);border:1px solid rgba(35,31,66,.15)" onclick="xoaLocTK()">✖ Bỏ lọc</button>
+        </div>
+      </div>
+      <div class="tk-body" id="tkBody">
+        <div class="tk-empty">Chọn tháng và năm rồi nhấn <b>Tính toán</b> để xem thống kê.</div>
+      </div>
+    </div>
+
+    <!-- CHỈ TIÊU PANEL -->
+    <div class="ct-panel" id="ctPanel">
+      <div class="ct-head">
+        <div class="ct-head-title">🎯 Theo dõi chỉ tiêu</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="ct-tabs">
+            <button class="ct-tab on" id="ctTab_yeucaukt" onclick="switchCtTab('yeucaukt')">Yêu cầu KT</button>
+            <button class="ct-tab" id="ctTab_kstt" onclick="switchCtTab('kstt')">Kiểm sát trực tiếp</button>
+            <button class="ct-tab" id="ctTab_ycph" onclick="switchCtTab('ycph')">YC phục hồi</button>
+            <button class="ct-tab" id="ctTab_quache" onclick="switchCtTab('quache')">Quy chế đã ký</button>
+            <button class="ct-tab" id="ctTab_khac" onclick="switchCtTab('khac')">Chỉ tiêu khác</button>
+          </div>
+        </div>
+      </div>
+      <div class="ct-toolbar">
+        <div class="search-box"><span>🔍</span><input type="text" id="ctSearch" placeholder="Tìm kiếm..." oninput="renderCtTable()"></div>
+      </div>
+      <div class="ct-tbl-wrap">
+        <table width="100%" style="border-collapse:collapse">
+          <thead id="ctTblHead"></thead>
+          <tbody id="ctTblBody"></tbody>
+        </table>
+      </div>
+      <div id="ctEmpty" class="ct-empty" style="display:none"><div class="ei">🎯</div><p>Chưa có dữ liệu chỉ tiêu.</p></div>
+    </div>
+
+    <!-- KIẾN NGHỊ PANEL -->
+    <div class="ct-panel" id="knPanel">
+      <div class="ct-head">
+        <div class="ct-head-title">📝 Theo dõi kiến nghị</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="ct-tabs">
+            <button class="ct-tab on" id="knTab_phongngua" onclick="switchKnTab('phongngua')">Kiến nghị phòng ngừa</button>
+            <button class="ct-tab" id="knTab_vipham" onclick="switchKnTab('vipham')">Kiến nghị vi phạm</button>
+          </div>
+        </div>
+      </div>
+      <div class="ct-toolbar">
+        <div class="search-box"><span>🔍</span><input type="text" id="knSearch" placeholder="Tìm kiếm..." oninput="renderKnTable()"></div>
+        <select class="fsel" id="knFilterTL" onchange="renderKnTable()">
+          <option value="">Tất cả trả lời</option>
+          <option value="Có">Đã có trả lời</option>
+          <option value="Chưa">Chưa có trả lời</option>
+        </select>
+      </div>
+      <div class="ct-tbl-wrap">
+        <table width="100%" style="border-collapse:collapse">
+          <thead id="knTblHead"></thead>
+          <tbody id="knTblBody"></tbody>
+        </table>
+      </div>
+      <div id="knEmpty" class="ct-empty" style="display:none"><div class="ei">📝</div><p>Chưa có kiến nghị nào.</p></div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-card" id="tableCard">
+      <div class="toolbar">
+        <div class="section-label"><span class="sec-dot sd-blue" id="toolDot"></span><span id="toolLabel">Tổng hợp</span></div>
+        <div class="toolbar-r">
+          <div class="search-box"><span>🔍</span><input type="text" id="searchInput" placeholder="Tìm kiếm..." oninput="applyFilter()"></div>
+          <select class="fsel" id="filterPL" onchange="applyFilter()">
+            <option value="">Tất cả phân loại</option>
+            <option>Tố giác tội phạm</option><option>Tin báo về tội phạm</option><option>Kiến nghị khởi tố</option>
+          </select>
+          <select class="fsel" id="filterLT" onchange="applyFilter()">
+            <option value="">Tất cả loại tội</option>
+            <option>TNGT</option><option>Tai nạn lao động</option>
+            <option>Cố ý gây thương tích</option><option>Giết người</option>
+            <option>Chết chưa rõ nguyên nhân</option><option>Cháy chưa rõ nguyên nhân</option>
+            <option>Trộm cắp tài sản</option><option>Cướp tài sản</option><option>Cướp giật tài sản</option>
+            <option>Lừa đảo chiếm đoạt TS</option><option>Lạm dụng tín nhiệm chiếm đoạt TS</option>
+            <option>Hủy hoại/Khai thác trái phép TS</option>
+            <option>Ma túy</option><option>Tàng trữ ma túy</option><option>Mua bán ma túy</option>
+            <option>Vận chuyển ma túy</option><option>Tổ chức sử dụng ma túy</option>
+            <option>Hiếp dâm</option><option>Cưỡng dâm</option>
+            <option>Giao cấu với người dưới 16 tuổi</option><option>Dâm ô với người dưới 16 tuổi</option>
+            <option>Bạo lực gia đình</option><option>Đánh bạc</option><option>Tổ chức đánh bạc</option>
+            <option>Vi phạm quy định về an toàn giao thông</option>
+            <option>Vi phạm quy định về khai thác tài nguyên</option>
+            <option>Tham nhũng</option><option>Nhận hối lộ</option><option>Lợi dụng chức vụ quyền hạn</option>
+            <option>Môi trường</option><option>Chống người thi hành công vụ</option>
+            <option>Gây rối trật tự công cộng</option><option>Trốn thuế</option>
+            <option>Bắt giữ người trái pháp luật</option><option>Khác</option>
+          </select>
+          <select class="fsel" id="filterMonth" onchange="applyFilter()">
+            <option value="">Tất cả thời điểm</option>
+            <option value="Năm trước chuyển qua">Năm trước chuyển qua</option>
+            <option value="Tháng 10">Tháng 10</option><option value="Tháng 11">Tháng 11</option>
+            <option value="Tháng 12">Tháng 12</option><option value="Tháng 1">Tháng 1</option>
+            <option value="Tháng 2">Tháng 2</option><option value="Tháng 3">Tháng 3</option>
+            <option value="Tháng 4">Tháng 4</option><option value="Tháng 5">Tháng 5</option>
+            <option value="Tháng 6">Tháng 6</option><option value="Tháng 7">Tháng 7</option>
+            <option value="Tháng 8">Tháng 8</option><option value="Tháng 9">Tháng 9</option>
+          </select>
+          <select class="fsel" id="filterGH" onchange="applyFilter()">
+            <option value="">Tất cả gia hạn</option>
+            <option value="cogiahan">Có gia hạn</option>
+            <option value="chuagiahan">Chưa gia hạn</option>
+          </select>
+          <select class="fsel" id="filterKQ" onchange="applyFilter()">
+            <option value="">Tất cả kết quả</option>
+            <option value="dagiaiquyet">Đã giải quyết (tất cả)</option>
+            <option value="khoito">Khởi tố</option>
+            <option value="khongkhoito">Không khởi tố</option>
+            <option value="kkthethoihieu">KKT — Hết thời hiệu</option>
+            <option value="chuagq">Chưa giải quyết</option>
+          </select>
+          <select class="fsel" id="sortField" onchange="applyFilter()">
+            <option value="">Sắp xếp theo...</option>
+            <option value="stt_asc">STT (tăng)</option>
+            <option value="stt_desc">STT (giảm)</option>
+            <option value="ngay_asc">Ngày thụ lý (cũ nhất)</option>
+            <option value="ngay_desc">Ngày thụ lý (mới nhất)</option>
+            <option value="month">Thời điểm tính số liệu</option>
+            <option value="hoten">Họ tên (A→Z)</option>
+            <option value="loaitoi">Loại tội</option>
+            <option value="giahan_asc">Ngày GH (cũ nhất)</option>
+            <option value="giahan_desc">Ngày GH (mới nhất)</option>
+          </select>
+        </div>
+      </div>
+      <div class="chip-row" id="chipRow"></div>
+      <div class="month-legend" id="monthLegend" style="display:none">
+        <span style="font-size:10.5px;font-weight:700;color:var(--muted);margin-right:4px">Màu tháng:</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#ede9fe"></span>Năm trước</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#fff7e6"></span>T.10</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#e6f7ff"></span>T.11</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#fff0f0"></span>T.12</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#f0fff4"></span>T.1</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#fffde7"></span>T.2</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#fce4ec"></span>T.3</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#e8f5e9"></span>T.4</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#e3f2fd"></span>T.5</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#fff3e0"></span>T.6</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#f3e5f5"></span>T.7</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#e0f7fa"></span>T.8</span>
+        <span class="ml-item"><span class="ml-dot" style="background:#fafafa;border:1px solid #ddd"></span>T.9</span>
+      </div>
+      <div class="tbl-wrap"><table><thead id="tblHead"></thead><tbody id="tblBody"></tbody></table></div>
+      <div id="emptyState" class="empty" style="display:none"><div class="ei">📂</div><p>Không có tin báo nào trong danh mục này.</p></div>
+      <div class="pager" id="pager"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CHI TIẾT TIN BÁO -->
+<div class="overlay" id="detailOverlay">
+  <div class="modal" style="max-width:760px">
+    <div class="modal-head">
+      <div class="modal-head-title"><span>📋</span><span id="dtTitle">Chi tiết tin báo</span></div>
+      <button class="modal-x" onclick="closeOvl('detailOverlay')">×</button>
+    </div>
+    <div class="modal-body" id="dtBody"></div>
+    <div class="modal-foot" id="dtFoot"></div>
+  </div>
+</div>
+
+<!-- MODAL THÊM/SỬA -->
+<div class="overlay" id="formOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-head-title"><span id="formIcon">📝</span><span id="formTitle">Thêm Tin Báo Mới</span></div>
+      <button class="modal-x" onclick="closeOvl('formOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+
+        <!-- TIẾP NHẬN -->
+        <div class="form-sep"><span>Thông tin tiếp nhận</span></div>
+        <div class="fg">
+          <label>Ngày VKS thụ lý <span class="r">*</span></label>
+          <div class="dp-wrap">
+            <input type="text" class="fc qd-ngay" id="f_ngay" placeholder="dd/MM/yyyy"
+              oninput="dpSyncFromInput('dp_f_ngay','f_ngay');calcDlHintText()"
+              onblur="dpValidateInput('f_ngay');calcDlHintText()"
+              onclick="toggleDP('dp_f_ngay')">
+            <span class="dp-icon" onclick="toggleDP('dp_f_ngay')">📅</span>
+            <div class="dp-popup" id="dp_f_ngay"></div>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Ngày CSĐT thụ lý</label>
+          <div class="dp-wrap">
+            <input type="text" class="fc qd-ngay" id="f_ngay_csdt" placeholder="dd/MM/yyyy"
+              oninput="dpSyncFromInput('dp_f_ngay_csdt','f_ngay_csdt');calcDlHintText()"
+              onblur="dpValidateInput('f_ngay_csdt');calcDlHintText()"
+              onclick="toggleDP('dp_f_ngay_csdt')">
+            <span class="dp-icon" onclick="toggleDP('dp_f_ngay_csdt')">📅</span>
+            <div class="dp-popup" id="dp_f_ngay_csdt"></div>
+          </div>
+          <div class="dl-hint" id="dlHint" style="display:none"></div>
+        </div>
+        <div class="fg">
+          <label>Thời điểm tính số liệu vụ việc</label>
+          <select class="fc" id="f_thoidiemphatsinh">
+            <option value="">-- Chọn --</option>
+            <option value="Năm trước chuyển qua">Năm trước chuyển qua</option>
+            <option value="Tháng 10">Tháng 10</option>
+            <option value="Tháng 11">Tháng 11</option>
+            <option value="Tháng 12">Tháng 12</option>
+            <option value="Tháng 1">Tháng 1</option>
+            <option value="Tháng 2">Tháng 2</option>
+            <option value="Tháng 3">Tháng 3</option>
+            <option value="Tháng 4">Tháng 4</option>
+            <option value="Tháng 5">Tháng 5</option>
+            <option value="Tháng 6">Tháng 6</option>
+            <option value="Tháng 7">Tháng 7</option>
+            <option value="Tháng 8">Tháng 8</option>
+            <option value="Tháng 9">Tháng 9</option>
+          </select>
+        </div>
+        <div class="fg" style="display:flex;align-items:center;padding-top:20px">
+          <label class="cb-label">
+            <input type="checkbox" id="f_caxathuly" style="width:16px;height:16px;margin-right:8px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
+            <span>Công an xã thụ lý</span>
+          </label>
+        </div>
+        <div class="fg">
+          <label>Phân loại <span class="r">*</span></label>
+          <select class="fc" id="f_phanloai">
+            <option value="">-- Chọn --</option>
+            <option>Tố giác tội phạm</option><option>Tin báo về tội phạm</option><option>Kiến nghị khởi tố</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Loại tội <span class="r">*</span></label>
+          <select class="fc" id="f_loaitoi">
+            <option value="">-- Chọn --</option>
+            <option>TNGT</option><option>Tai nạn lao động</option>
+            <option>Cố ý gây thương tích</option><option>Giết người</option>
+            <option>Chết chưa rõ nguyên nhân</option><option>Cháy chưa rõ nguyên nhân</option>
+            <option>Trộm cắp tài sản</option><option>Cướp tài sản</option><option>Cướp giật tài sản</option>
+            <option>Lừa đảo chiếm đoạt TS</option><option>Lạm dụng tín nhiệm chiếm đoạt TS</option>
+            <option>Hủy hoại/Khai thác trái phép TS</option>
+            <option>Ma túy</option><option>Tàng trữ ma túy</option><option>Mua bán ma túy</option>
+            <option>Vận chuyển ma túy</option><option>Tổ chức sử dụng ma túy</option>
+            <option>Hiếp dâm</option><option>Cưỡng dâm</option>
+            <option>Giao cấu với người dưới 16 tuổi</option><option>Dâm ô với người dưới 16 tuổi</option>
+            <option>Bạo lực gia đình</option><option>Đánh bạc</option><option>Tổ chức đánh bạc</option>
+            <option>Vi phạm quy định về an toàn giao thông</option>
+            <option>Vi phạm quy định về khai thác tài nguyên</option>
+            <option>Tham nhũng</option><option>Nhận hối lộ</option><option>Lợi dụng chức vụ quyền hạn</option>
+            <option>Môi trường</option><option>Chống người thi hành công vụ</option>
+            <option>Gây rối trật tự công cộng</option><option>Trốn thuế</option>
+            <option>Bắt giữ người trái pháp luật</option><option>Khác</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Ngày xảy ra <span class="r">*</span></label>
+          <div class="dp-wrap">
+            <input type="text" class="fc qd-ngay" id="f_ngay_xayra" placeholder="dd/MM/yyyy"
+              oninput="dpSyncFromInput('dp_f_ngay_xayra','f_ngay_xayra')"
+              onblur="dpValidateInput('f_ngay_xayra')"
+              onclick="toggleDP('dp_f_ngay_xayra')">
+            <span class="dp-icon" onclick="toggleDP('dp_f_ngay_xayra')">📅</span>
+            <div class="dp-popup" id="dp_f_ngay_xayra"></div>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Nơi xảy ra <span class="r">*</span></label>
+          <input type="text" class="fc" id="f_noi_xayra" placeholder="VD: xóm Ót, Yên Lạc, Yên Thủy, Hòa Bình">
+        </div>
+        <div class="fg">
+          <label>Họ và tên người cung cấp tin</label>
+          <input type="text" class="fc" id="f_hoten" placeholder="Nguyễn Văn A">
+        </div>
+        <div class="fg">
+          <label>Địa chỉ / Cơ quan tổ chức</label>
+          <input type="text" class="fc" id="f_diachi" placeholder="Địa chỉ hoặc tên cơ quan">
+        </div>
+        <div class="fg fg-full">
+          <label>Tóm tắt nội dung sự việc <span class="r">*</span></label>
+          <textarea class="fc" id="f_tomtat" placeholder="Mô tả tóm tắt nội dung..."></textarea>
+        </div>
+
+        <!-- HẬU QUẢ -->
+        <div class="form-sep"><span>Hậu quả vụ việc <span style="font-weight:400;color:var(--muted)">(không bắt buộc)</span></span></div>
+        <div class="fg">
+          <label>Số người chết</label>
+          <input type="number" class="fc" id="f_hq_chet" placeholder="0" min="0" style="width:100%">
+        </div>
+        <div class="fg">
+          <label>Số người bị thương</label>
+          <input type="number" class="fc" id="f_hq_thuong" placeholder="0" min="0" style="width:100%">
+        </div>
+        <div class="fg">
+          <label>Thiệt hại tài sản (đồng)</label>
+          <input type="text" class="fc" id="f_hq_taisan" placeholder="VD: 50.000.000">
+        </div>
+        <div class="fg">
+          <label>Ghi chú hậu quả khác</label>
+          <input type="text" class="fc" id="f_hq_khac" placeholder="Mô tả thêm nếu có...">
+        </div>
+
+        <!-- PHÂN CÔNG -->
+        <div class="form-sep"><span>Phân công thụ lý</span></div>
+        <div class="fg">
+          <label>Phó Viện trưởng thụ lý <span class="r">*</span></label>
+          <select class="fc" id="f_pvt"><option value="">-- Chọn --</option></select>
+        </div>
+        <div class="fg">
+          <label>Kiểm sát viên thụ lý <span class="r">*</span></label>
+          <select class="fc" id="f_ksv"><option value="">-- Chọn --</option></select>
+        </div>
+
+        <!-- QĐ GIA HẠN -->
+        <div class="form-sep"><span>QĐ gia hạn thời hạn giải quyết</span></div>
+        <div class="fg fg-full">
+          <div class="qd-row">
+            <input type="text" class="fc qd-so" id="f_giahan_so" placeholder="Số QĐ gia hạn">
+            <div class="dp-wrap">
+              <input type="text" class="fc qd-ngay" id="f_giahan_ngay" placeholder="dd/MM/yyyy"
+                oninput="dpSyncFromInput('dp_giahan','f_giahan_ngay');calcDlHintText()"
+                onblur="dpValidateInput('f_giahan_ngay');calcDlHintText()"
+                onclick="toggleDP('dp_giahan')">
+              <span class="dp-icon" onclick="toggleDP('dp_giahan')">📅</span>
+              <div class="dp-popup" id="dp_giahan"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+              <input type="number" class="fc" id="f_giahan_ngayso" placeholder="Ngày GH"
+                min="1" max="365" style="width:90px;text-align:center"
+                oninput="calcDlHintText()"
+                title="Số ngày gia hạn (thường 60 hoặc 120 ngày)">
+              <span style="font-size:11px;color:var(--muted);white-space:nowrap">ngày GH</span>
+            </div>
+          </div>
+          <div class="dl-hint" id="dlHintGH" style="display:none;margin-top:4px"></div>
+        </div>
+
+        <!-- DANH SÁCH TẠM ĐÌNH CHỈ -->
+        <div class="form-sep"><span>QĐ tạm đình chỉ giải quyết</span></div>
+        <div class="fg fg-full">
+          <div class="tdph-list" id="tdphList"></div>
+          <div class="tdph-add-row">
+            <button type="button" class="btn-sm2" onclick="addTDPH('tamdinhchi')">＋ Thêm QĐ tạm đình chỉ</button>
+            <span style="font-size:11px;color:var(--muted);margin-left:8px">QĐ tiếp tục giải quyết chỉ thêm được từ tab Tạm đình chỉ</span>
+          </div>
+        </div>
+
+        <!-- YÊU CẦU VKS -->
+        <div class="form-sep"><span>Yêu cầu của VKS</span></div>
+        <div class="ykq-block">
+          <div class="ykq-select-row">
+            <select class="fc" id="f_yeucau_loai" onchange="toggleYKQ('yc')" style="flex:0 0 220px">
+              <option value="">-- Chọn yêu cầu --</option>
+              <option value="Yêu cầu khởi tố">Yêu cầu khởi tố vụ án</option>
+              <option value="Không khởi tố">Không khởi tố</option>
+            </select>
+          </div>
+          <div class="ykq-detail" id="ycDetail">
+            <label>Số QĐ</label>
+            <input type="text" class="fc" id="f_yeucau_so" placeholder="Số quyết định" style="width:120px">
+            <label>Ngày ký</label>
+            <div class="dp-wrap">
+              <input type="text" class="fc qd-ngay" id="f_yeucau_ngay" placeholder="dd/MM/yyyy"
+                oninput="dpSyncFromInput('dp_yc','f_yeucau_ngay')"
+                onblur="dpValidateInput('f_yeucau_ngay')"
+                onclick="toggleDP('dp_yc')">
+              <span class="dp-icon" onclick="toggleDP('dp_yc')">📅</span>
+              <div class="dp-popup" id="dp_yc"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KẾT QUẢ GIẢI QUYẾT -->
+        <div class="form-sep"><span>Kết quả giải quyết</span></div>
+        <div class="ykq-block">
+          <div class="ykq-select-row" style="gap:10px;flex-wrap:wrap;align-items:flex-start">
+            <select class="fc" id="f_ketqua_loai" onchange="buildKQStr()" style="flex:0 0 200px">
+              <option value="">-- Chưa giải quyết --</option>
+              <option value="Khởi tố">Khởi tố</option>
+              <option value="Không khởi tố">Không khởi tố</option>
+              <option value="Không khởi tố - Hết thời hiệu">Không KT - Hết thời hiệu TCTNHS</option>
+            </select>
+            <input type="text" class="fc" id="f_ketqua_so" placeholder="Số QĐ" style="width:110px" oninput="buildKQStr()">
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:180px">
+              <div style="display:flex;gap:8px;align-items:center">
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;font-weight:500">
+                  <input type="radio" name="kq_date_mode" value="full" id="kq_mode_full" checked onchange="switchKQDateMode()" style="cursor:pointer">
+                  Ngày/tháng/năm
+                </label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;font-weight:500">
+                  <input type="radio" name="kq_date_mode" value="month" id="kq_mode_month" onchange="switchKQDateMode()" style="cursor:pointer">
+                  Tháng/năm
+                </label>
+              </div>
+              <div id="kq_input_full" class="dp-wrap">
+                <input type="text" class="fc qd-ngay" id="f_ketqua_ngay" placeholder="dd/MM/yyyy"
+                  oninput="dpSyncFromInput('dp_kq','f_ketqua_ngay');buildKQStr()"
+                  onblur="dpValidateInput('f_ketqua_ngay');buildKQStr()"
+                  onclick="toggleDP('dp_kq')">
+                <span class="dp-icon" onclick="toggleDP('dp_kq')">📅</span>
+                <div class="dp-popup" id="dp_kq"></div>
+              </div>
+              <div id="kq_input_month" style="display:none;gap:6px;align-items:center">
+                <select class="fc" id="f_ketqua_thang" onchange="buildKQStr()" style="width:110px">
+                  <option value="">-- Tháng --</option>
+                  <option value="01">Tháng 1</option><option value="02">Tháng 2</option>
+                  <option value="03">Tháng 3</option><option value="04">Tháng 4</option>
+                  <option value="05">Tháng 5</option><option value="06">Tháng 6</option>
+                  <option value="07">Tháng 7</option><option value="08">Tháng 8</option>
+                  <option value="09">Tháng 9</option><option value="10">Tháng 10</option>
+                  <option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+                </select>
+                <select class="fc" id="f_ketqua_nam" onchange="buildKQStr()" style="width:100px">
+                  <option value="">-- Năm --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div id="kqPreview" style="display:none;margin-top:6px;padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;font-size:12.5px;font-weight:600;color:var(--navy)"></div>
+          <div style="margin-top:8px;padding:8px 10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px">
+            <label style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.5px">Ngày tính số liệu kết quả <span style="font-weight:400;text-transform:none">(nếu khác ngày QĐ)</span></label>
+            <div class="dp-wrap" style="margin-top:4px">
+              <input type="text" class="fc qd-ngay" id="f_ketqua_ngayTSL" placeholder="dd/MM/yyyy — bỏ trống = lấy ngày QĐ"
+                oninput="dpSyncFromInput('dp_kqtsl','f_ketqua_ngayTSL')"
+                onblur="dpValidateInput('f_ketqua_ngayTSL')"
+                onclick="toggleDP('dp_kqtsl')">
+              <span class="dp-icon" onclick="toggleDP('dp_kqtsl')">📅</span>
+              <div class="dp-popup" id="dp_kqtsl"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GHI CHÚ -->
+        <div class="form-sep"><span>Ghi chú (nếu có)</span></div>
+        <div class="fg fg-full">
+          <textarea class="fc" id="f_ghichu_vv" placeholder="Ghi chú thêm về vụ việc nếu có..." style="min-height:56px"></textarea>
+        </div>
+
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOvl('formOverlay')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveRecord()">💾 Lưu hồ sơ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CHỈ TIÊU -->
+<div class="overlay" id="ctOverlay">
+  <div class="modal modal-sm" style="max-width:600px">
+    <div class="modal-head">
+      <div class="modal-head-title"><span id="ctFormIcon">🎯</span> <span id="ctFormTitle">Thêm chỉ tiêu</span></div>
+      <button class="modal-x" onclick="closeOvl('ctOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="fg">
+          <label>Loại chỉ tiêu <span class="r">*</span></label>
+          <select class="fc" id="ct_loai" onchange="toggleCtLoaiTuDo()">
+            <option value="Yêu cầu khởi tố">Yêu cầu khởi tố</option>
+            <option value="Kiểm sát trực tiếp">Kiểm sát trực tiếp</option>
+            <option value="Yêu cầu phục hồi tin báo">Yêu cầu phục hồi tin báo</option>
+            <option value="Quy chế đã ký">Quy chế đã ký</option>
+            <option value="Khác">Khác (nhập tự do)</option>
+          </select>
+        </div>
+        <div class="fg" id="ct_loai_tudo_wrap" style="display:none">
+          <label>Tên chỉ tiêu <span class="r">*</span></label>
+          <input type="text" class="fc" id="ct_loai_tudo" placeholder="Nhập tên chỉ tiêu...">
+        </div>
+        <div class="fg">
+          <label>Số QĐ / Văn bản</label>
+          <input type="text" class="fc" id="ct_so" placeholder="Số QĐ hoặc số VB">
+        </div>
+        <div class="fg">
+          <label>Ngày ký</label>
+          <div class="dp-wrap">
+            <input type="text" class="fc qd-ngay" id="ct_ngay" placeholder="dd/MM/yyyy"
+              oninput="dpSyncFromInput('dp_ct_ngay','ct_ngay')"
+              onblur="dpValidateInput('ct_ngay')"
+              onclick="toggleDP('dp_ct_ngay')">
+            <span class="dp-icon" onclick="toggleDP('dp_ct_ngay')">📅</span>
+            <div class="dp-popup" id="dp_ct_ngay"></div>
+          </div>
+        </div>
+        <div class="fg fg-full">
+          <label>Nội dung <span class="r">*</span></label>
+          <textarea class="fc" id="ct_noidung" placeholder="Mô tả nội dung..." style="min-height:72px"></textarea>
+        </div>
+
+        <div class="form-sep"><span>Người thực hiện</span></div>
+        <div class="fg fg-full">
+          <label style="margin-bottom:6px;display:block">Chọn cán bộ thực hiện (click để chọn)</label>
+          <div class="staff-checkgroup" id="ct_staff_chips"></div>
+        </div>
+        <div class="fg fg-full">
+          <label>Người thực hiện khác (điền thêm)</label>
+          <input type="text" class="fc" id="ct_nguoi_khac" placeholder="Nhập tên nếu không có trong danh sách...">
+        </div>
+
+        <div class="fg fg-full">
+          <label>Ghi chú</label>
+          <input type="text" class="fc" id="ct_ghichu" placeholder="Ghi chú thêm nếu có">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOvl('ctOverlay')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveCtRecord()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KIẾN NGHỊ -->
+<div class="overlay" id="knOverlay">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <div class="modal-head-title"><span id="knFormIcon">📝</span> <span id="knFormTitle">Thêm kiến nghị</span></div>
+      <button class="modal-x" onclick="closeOvl('knOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="fg">
+          <label>Loại kiến nghị <span class="r">*</span></label>
+          <select class="fc" id="kn_loai">
+            <option value="Kiến nghị phòng ngừa">Kiến nghị phòng ngừa</option>
+            <option value="Kiến nghị vi phạm">Kiến nghị vi phạm</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Số văn bản</label>
+          <input type="text" class="fc" id="kn_so" placeholder="Số VB">
+        </div>
+        <div class="fg">
+          <label>Ngày ban hành</label>
+          <div class="dp-wrap">
+            <input type="text" class="fc qd-ngay" id="kn_ngay" placeholder="dd/MM/yyyy"
+              oninput="dpSyncFromInput('dp_kn_ngay','kn_ngay')"
+              onblur="dpValidateInput('kn_ngay')"
+              onclick="toggleDP('dp_kn_ngay')">
+            <span class="dp-icon" onclick="toggleDP('dp_kn_ngay')">📅</span>
+            <div class="dp-popup" id="dp_kn_ngay"></div>
+          </div>
+        </div>
+        <div class="fg fg-full">
+          <label>Nội dung kiến nghị <span class="r">*</span></label>
+          <textarea class="fc" id="kn_noidung" placeholder="Nội dung kiến nghị..." style="min-height:80px"></textarea>
+        </div>
+
+        <div class="form-sep"><span>Thông tin trả lời</span></div>
+        <div class="fg">
+          <label>Đã có trả lời?</label>
+          <select class="fc" id="kn_tratloai" onchange="toggleKnTraLoi()">
+            <option value="Chưa">Chưa có trả lời</option>
+            <option value="Có">Đã có trả lời</option>
+          </select>
+        </div>
+        <div class="fg" id="kn_so_tl_wrap" style="display:none">
+          <label>Số VB trả lời</label>
+          <input type="text" class="fc" id="kn_sotl" placeholder="Số văn bản trả lời">
+        </div>
+        <div class="fg" id="kn_ngay_tl_wrap" style="display:none">
+          <label>Ngày VB trả lời</label>
+          <div class="dp-wrap">
+            <input type="text" class="fc qd-ngay" id="kn_ngaytl" placeholder="dd/MM/yyyy"
+              oninput="dpSyncFromInput('dp_kn_ngaytl','kn_ngaytl')"
+              onblur="dpValidateInput('kn_ngaytl')"
+              onclick="toggleDP('dp_kn_ngaytl')">
+            <span class="dp-icon" onclick="toggleDP('dp_kn_ngaytl')">📅</span>
+            <div class="dp-popup" id="dp_kn_ngaytl"></div>
+          </div>
+        </div>
+
+        <div class="form-sep"><span>Cán bộ ban hành kiến nghị</span></div>
+        <div class="fg fg-full">
+          <label style="margin-bottom:6px;display:block">Chọn cán bộ (click để chọn)</label>
+          <div class="staff-checkgroup" id="kn_staff_chips"></div>
+        </div>
+        <div class="fg fg-full">
+          <label>Cán bộ khác (điền thêm)</label>
+          <input type="text" class="fc" id="kn_ghichu" placeholder="Tên cán bộ hoặc ghi chú khác...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOvl('knOverlay')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveKnRecord()">💾 Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KẾT THÚC NĂM -->
+<div class="overlay" id="ketThucNamOverlay">
+  <div class="modal modal-sm" style="max-width:500px">
+    <div class="modal-head" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">
+      <div class="modal-head-title" style="color:#fff">🗓️ Kết thúc năm</div>
+      <button class="modal-x" style="color:#fff" onclick="closeOvl('ketThucNamOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="ktnInfo" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;margin-bottom:14px;font-size:13px;line-height:1.7">
+        <div style="font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ Xác nhận kết thúc năm</div>
+        <div id="ktnDesc"></div>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.8">
+        Hành động này sẽ:
+        <ul style="margin:6px 0 0 18px;padding:0">
+          <li>Đổi tên 3 sheet hiện tại → thêm năm (VD: <b>DanhSachTinBao_2026</b>)</li>
+          <li>Chuyển tất cả tin <b>chưa giải quyết</b> sang sheet năm mới với thời điểm phát sinh = <b>"Năm trước chuyển qua"</b></li>
+          <li>Tin đã giải quyết giữ nguyên trong sheet năm cũ</li>
+          <li>Tạo 3 sheet mới trống cho năm tiếp theo</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOvl('ketThucNamOverlay')">Hủy</button>
+      <button class="btn" style="background:#dc2626;color:#fff" onclick="doKetThucNam()">✅ Xác nhận kết thúc năm</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IN SỔ -->
+<div class="overlay" id="inSoOverlay">
+  <div class="modal modal-sm" style="max-width:560px">
+    <div class="modal-head" style="background:linear-gradient(135deg,#166534,#15803d)">
+      <div class="modal-head-title" style="color:#fff">📖 In Sổ thụ lý tin báo</div>
+      <button class="modal-x" style="color:#fff" onclick="closeOvl('inSoOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+        Sổ in khổ <b>A3 ngang</b>, đầy đủ 17 cột theo mẫu Sổ thụ lý tin báo, tố giác tội phạm và kiến nghị khởi tố.
+      </div>
+      <div class="fg">
+        <label>Phạm vi in</label>
+        <select class="fc" id="inSo_range" onchange="toggleInSoRange()">
+          <option value="all">Toàn bộ tin báo (không lọc theo tháng)</option>
+          <option value="range">Theo khoảng tháng</option>
+        </select>
+      </div>
+      <div id="inSoRangeFields" style="display:none">
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <div class="fg" style="flex:1">
+            <label>Từ tháng</label>
+            <select class="fc" id="inSo_thangDau">
+              <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option>
+              <option value="4">Tháng 4</option><option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+              <option value="7">Tháng 7</option><option value="8">Tháng 8</option><option value="9">Tháng 9</option>
+              <option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+            </select>
+          </div>
+          <div class="fg" style="flex:1">
+            <label>Đến tháng</label>
+            <select class="fc" id="inSo_thangCuoi">
+              <option value="1">Tháng 1</option><option value="2">Tháng 2</option><option value="3">Tháng 3</option>
+              <option value="4">Tháng 4</option><option value="5">Tháng 5</option><option value="6">Tháng 6</option>
+              <option value="7">Tháng 7</option><option value="8">Tháng 8</option><option value="9">Tháng 9</option>
+              <option value="10">Tháng 10</option><option value="11">Tháng 11</option><option value="12">Tháng 12</option>
+            </select>
+          </div>
+          <div class="fg" style="flex:0 0 100px">
+            <label>Năm</label>
+            <select class="fc" id="inSo_nam"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot" style="flex-wrap:wrap;gap:6px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeOvl('inSoOverlay')">Hủy</button>
+      <button class="btn" style="background:#9333ea;color:#fff" onclick="downloadSoTDCPdf()" title="Tải Sổ Tạm đình chỉ về file PDF (.pdf) khổ A3 ngang">📕 Sổ TĐC (.pdf)</button>
+      <button class="btn" style="background:#7c3aed;color:#fff" onclick="downloadSoTDCDoc()" title="Tải Sổ Tạm đình chỉ về file Word (.doc)">📥 Sổ TĐC (.doc)</button>
+      <button class="btn" style="background:#dc2626;color:#fff" onclick="doDownloadSoPdf()" title="Tải Sổ thụ lý tin báo về file PDF (.pdf) khổ A3 ngang">📕 Tải Sổ (.pdf)</button>
+      <button class="btn" style="background:#0284c7;color:#fff" onclick="doDownloadSoDoc()" title="Tải Sổ thụ lý tin báo về file Word (.doc)">📥 Tải Sổ (.doc)</button>
+      <button class="btn" style="background:#166534;color:#fff" onclick="doInSo()">🖨️ Mở & In Sổ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL QUẢN LÝ DANH SÁCH CÁN BỘ (PHÓ VT & KSV) -->
+<div class="overlay" id="staffOverlay">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-head">
+      <div class="modal-head-title">👥 Quản lý Danh sách Phó Viện trưởng & Kiểm sát viên</div>
+      <button class="modal-x" onclick="closeOvl('staffOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Mỗi dòng là họ tên 1 cán bộ. Danh sách này sẽ tự động cập nhật vào các ô chọn Phó Viện trưởng, Kiểm sát viên và Bộ lọc thống kê.
+      </div>
+      <div class="form-grid">
+        <div class="fg">
+          <label>Danh sách Phó Viện trưởng (mỗi dòng 1 tên)</label>
+          <textarea class="fc" id="staff_pvt_txt" style="min-height:220px;line-height:1.6"></textarea>
+        </div>
+        <div class="fg">
+          <label>Danh sách Kiểm sát viên (mỗi dòng 1 tên)</label>
+          <textarea class="fc" id="staff_ksv_txt" style="min-height:220px;line-height:1.6"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeOvl('staffOverlay')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveStaffModal()">💾 Lưu danh sách cán bộ</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXCEL / SAO LƯU / CLOUD ĐỒNG BỘ NHIỀU MÁY -->
+<div class="overlay" id="dataSyncOverlay">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <div class="modal-head-title">☁️ Nhập/Xuất Excel · Sao lưu · Đồng bộ Nhiều Máy</div>
+      <button class="modal-x" onclick="closeOvl('dataSyncOverlay')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <!-- 1. NHẬP / XUẤT EXCEL -->
+        <div class="form-sep"><span>1. Nhập / Xuất File Excel (.xlsx) từ Google Sheets</span></div>
+        <div class="fg">
+          <label>Nhập dữ liệu từ file Excel (.xlsx)</label>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">
+            Tải file Google Sheets hiện tại về máy dạng <b>Microsoft Excel (.xlsx)</b> rồi chọn file tại đây. Hệ thống tự nhận diện đầy đủ các sheet <code>DanhSachTinBao*</code>, <code>ChiTieu*</code>, <code>KienNghi*</code>, <code>TamDinhChi</code>.
+          </div>
+          <input type="file" id="excelUploadInput" accept=".xlsx,.xls" class="fc" style="padding:5px">
+          <button class="btn btn-primary" style="margin-top:6px;justify-content:center" onclick="uploadExcelFile()">📤 Tải lên & Nhập dữ liệu từ Excel</button>
+        </div>
+        <div class="fg">
+          <label>Xuất ra file Excel (.xlsx) chuẩn định dạng màu</label>
+          <div style="font-size:11.5px;color:var(--muted);margin-bottom:6px">
+            Xuất toàn bộ các sheet ra file <b>.xlsx</b> được tô màu nền theo tháng, màu chữ theo trạng thái (xanh lá = đã GQ, tím = TĐC, đỏ đậm = quá hạn...) giống hệt hàm <code>formatSheetTinBao</code>.
+          </div>
+          <button class="btn" style="background:#15803d;color:#fff;margin-top:auto;justify-content:center;padding:10px" onclick="exportExcelFile()">📥 Xuất File Excel (.xlsx) Đầy Đủ Màu Sắc</button>
+        </div>
+
+        <!-- 2. SAO LƯU & KHÔI PHỤC JSON -->
+        <div class="form-sep"><span>2. Sao lưu (Backup) & Khôi phục (Restore) 1 chạm</span></div>
+        <div class="fg">
+          <label>Sao lưu toàn bộ hệ thống (.json)</label>
+          <button class="btn btn-ghost" style="justify-content:center;padding:9px" onclick="downloadBackupJSON()">💾 Tải file Sao lưu (.json)</button>
+        </div>
+        <div class="fg">
+          <label>Khôi phục từ file Sao lưu (.json)</label>
+          <div style="display:flex;gap:6px">
+            <input type="file" id="jsonRestoreInput" accept=".json" class="fc" style="padding:4px;flex:1">
+            <button class="btn btn-gold" onclick="uploadRestoreJSON()">♻️ Khôi phục</button>
+          </div>
+        </div>
+
+        <!-- 3. ĐỒNG BỘ CLOUD SUPABASE NHIỀU MÁY -->
+        <div class="form-sep"><span>3. Đồng bộ Cloud (Supabase) giữa nhiều máy tính</span></div>
+        <div class="fg fg-full" style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px">
+          <div style="font-size:12px;line-height:1.55;color:var(--text);margin-bottom:8px">
+            💡 <b>Cách đồng bộ nhiều máy:</b>
+            <br>• <b>Cách A (Triển khai lên Render / Railway / VPS hoặc Mạng LAN):</b> Mở đường link web của máy chủ trên bất kỳ máy nào là tất cả đều dùng chung 1 cơ sở dữ liệu trực tiếp, không cần cấu hình thêm.
+            <br>• <b>Cách B (Kết nối Supabase Cloud miễn phí):</b> Nếu bạn chạy phần mềm độc lập ở nhiều máy khác nhau, điền <code>Project URL</code> và <code>Anon/Service Key</code> của Supabase (tạo bảng <code>vks_app_state (id text primary key, data jsonb, updated_at timestamptz)</code>) để các máy tự động đồng bộ.
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="fg">
+              <label>Supabase Project URL</label>
+              <input type="text" class="fc" id="cloud_url" placeholder="https://xxxx.supabase.co">
+            </div>
+            <div class="fg">
+              <label>Supabase API Key (anon / service_role)</label>
+              <input type="password" class="fc" id="cloud_key" placeholder="eyJhbGciOiJIUzI1NiIsInR5c...">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+            <span id="cloudStatusTxt" style="font-size:11.5px;color:var(--muted)">Trạng thái: Đang lưu trực tiếp trên Server</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-xs" onclick="pullCloudNow()">🔄 Kéo dữ liệu từ Cloud</button>
+              <button class="btn btn-primary btn-xs" onclick="saveCloudConfig()">☁️ Lưu cấu hình Cloud</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. ĐỔI MẬT KHẨU ĐĂNG NHẬP -->
+        <div class="form-sep"><span>4. Đổi mật khẩu bảo vệ hệ thống</span></div>
+        <div class="fg">
+          <label>Mật khẩu hiện tại</label>
+          <input type="password" class="fc" id="pw_old" placeholder="Nhập mật khẩu hiện tại">
+        </div>
+        <div class="fg">
+          <label>Mật khẩu mới</label>
+          <div style="display:flex;gap:6px">
+            <input type="password" class="fc" id="pw_new" placeholder="Mật khẩu mới (≥ 4 ký tự)" style="flex:1">
+            <button class="btn btn-primary" onclick="doChangePassword()">🔐 Đổi MK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" style="margin-right:auto" onclick="doLogout()">🚪 Đăng xuất</button>
+      <button class="btn btn-ghost" onclick="closeOvl('dataSyncOverlay')">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<div class="loader" id="loader"><div class="spin"></div></div>
+<div class="toast" id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="./vksBrowserEngine.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
