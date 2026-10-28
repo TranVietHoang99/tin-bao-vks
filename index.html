@@ -1380,6 +1380,104 @@ select.fc{background:#fafbff;cursor:pointer}
 
 <div class="loader" id="loader"><div class="spin"></div></div>
 <div class="toast" id="toast"></div>
+
+<!-- TRỢ LÝ TÌM KIẾM: CHÚ CHÓ PHƯƠNG HUỆ -->
+<style>
+.ph-dog-widget{position:fixed;right:22px;bottom:20px;z-index:940;display:flex;align-items:flex-end;gap:12px;font-family:'Plus Jakarta Sans','Inter',sans-serif;pointer-events:none}
+.ph-dog-widget *{pointer-events:auto}
+.ph-dog-panel{width:370px;max-width:calc(100vw - 110px);background:rgba(255,255,255,.97);backdrop-filter:blur(16px);border:2px solid #e5dfff;border-radius:24px;box-shadow:0 18px 46px rgba(35,31,66,.16),0 4px 14px rgba(130,103,240,.12);padding:14px 16px;transition:all .25s cubic-bezier(.2,.9,.3,1);transform-origin:bottom right;position:relative}
+.ph-dog-panel::after{content:'';position:absolute;right:-10px;bottom:26px;width:18px;height:18px;background:#fff;border-right:2px solid #e5dfff;border-bottom:2px solid #e5dfff;transform:rotate(-45deg)}
+.ph-dog-widget.minimized .ph-dog-panel{width:auto;max-width:280px;padding:10px 14px;border-radius:20px;cursor:pointer}
+.ph-dog-widget.minimized .ph-dog-body{display:none}
+.ph-dog-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ph-dog-greeting{font-size:13px;font-weight:800;color:#231f42;line-height:1.35;display:flex;align-items:center;gap:6px}
+.ph-dog-greeting span.spark{display:inline-block;background:linear-gradient(135deg,#ffd8cc,#e5dfff);padding:2px 7px;border-radius:999px;font-size:10.5px;color:#3d376e}
+.ph-dog-min-btn{background:#f4f2ff;border:none;width:24px;height:24px;border-radius:50%;color:#5e5882;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.15s}
+.ph-dog-min-btn:hover{background:#e5dfff;color:#231f42}
+.ph-dog-search-wrap{margin-top:10px;position:relative;display:flex;align-items:center}
+.ph-dog-input{width:100%;padding:9px 32px 9px 34px;border-radius:14px;border:1.5px solid #dcd6f7;background:#f9f8ff;font-size:12.5px;color:#231f42;font-family:inherit;outline:none;transition:.2s}
+.ph-dog-input:focus{border-color:#8267f0;background:#fff;box-shadow:0 0 0 3px rgba(130,103,240,.14)}
+.ph-dog-search-ico{position:absolute;left:11px;font-size:13px;pointer-events:none}
+.ph-dog-clear{position:absolute;right:9px;background:none;border:none;color:#9ca3af;cursor:pointer;font-size:14px;display:none}
+.ph-dog-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.ph-chip{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px;border:1px solid rgba(35,31,66,.08);background:#f3f5fc;color:#2f2a57;cursor:pointer;transition:.15s}
+.ph-chip:hover{background:#e5dfff;color:#231f42;transform:translateY(-1px)}
+.ph-dog-results{margin-top:8px;max-height:240px;overflow-y:auto;display:none;border-top:1px dashed #e5e7eb;padding-top:8px}
+.ph-dog-results.show{display:block}
+.ph-res-item{padding:7px 9px;border-radius:11px;background:#f8fafc;border:1px solid #edf0f7;margin-bottom:6px;cursor:pointer;transition:.15s;display:flex;flex-direction:column;gap:2px}
+.ph-res-item:hover{background:#f1eeff;border-color:#d0c4fc}
+.ph-res-top{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;font-weight:700;color:#231f42}
+.ph-res-sub{font-size:11px;color:#64748b;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ph-dog-avatar-btn{width:76px;height:76px;border-radius:50%;background:linear-gradient(135deg,#ffd8cc 0%,#e5dfff 55%,#d2ebff 100%);border:3px solid #fff;box-shadow:0 12px 28px rgba(35,31,66,.18);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;transition:transform .2s cubic-bezier(.2,.9,.3,1);animation:phDogFloat 3.2s ease-in-out infinite}
+.ph-dog-avatar-btn:hover{transform:scale(1.08) rotate(-3deg)}
+.ph-dog-badge{position:absolute;top:-4px;right:-4px;background:#231f42;color:#fff;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:999px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.ph-dog-tail{transform-origin:58px 54px;animation:phTailWag 0.9s ease-in-out infinite alternate}
+@keyframes phDogFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes phTailWag{0%{transform:rotate(-12deg)}100%{transform:rotate(14deg)}}
+</style>
+
+<div class="ph-dog-widget" id="dogAssistantWidget">
+  <div class="ph-dog-panel" id="phDogPanel" onclick="if(document.getElementById('dogAssistantWidget').classList.contains('minimized'))togglePhuongHueDog(false)">
+    <div class="ph-dog-head">
+      <div class="ph-dog-greeting">
+        🐶 <span>Chú chó Phương Huệ ở đây bạn cần giúp gì</span>
+      </div>
+      <button class="ph-dog-min-btn" id="phDogMinBtn" onclick="event.stopPropagation();togglePhuongHueDog()" title="Thu gọn / Mở rộng trợ lý">−</button>
+    </div>
+    <div class="ph-dog-body">
+      <div class="ph-dog-search-wrap">
+        <span class="ph-dog-search-ico">🔎</span>
+        <input type="text" class="ph-dog-input" id="phDogInput" placeholder="Tìm nhanh: tên, #STT, tội danh, xã, KSV..." oninput="onPhuongHueSearch(this.value)">
+        <button class="ph-dog-clear" id="phDogClear" onclick="clearPhuongHueSearch()">×</button>
+      </div>
+      <div class="ph-dog-chips">
+        <button class="ph-chip" onclick="phuongHueQuickFilter('quahan')">⚠️ Sắp/Quá hạn</button>
+        <button class="ph-chip" onclick="phuongHueQuickFilter('dangcho')">⏳ Đang chờ GQ</button>
+        <button class="ph-chip" onclick="phuongHueQuickFilter('tamdinh')">⏸️ Tạm đình chỉ</button>
+        <button class="ph-chip" onclick="phuongHueQuickFilter('cax')">🏢 Công an xã</button>
+        <button class="ph-chip" onclick="phuongHueQuickFilter('thongke')">📊 Thống kê</button>
+      </div>
+      <div class="ph-dog-results" id="phDogResults"></div>
+    </div>
+  </div>
+
+  <div class="ph-dog-avatar-btn" onclick="togglePhuongHueDog()" title="Chú chó Phương Huệ ở đây bạn cần giúp gì">
+    <span class="ph-dog-badge">🐾 Huệ</span>
+    <svg width="62" height="62" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Đuôi vẫy -->
+      <path class="ph-dog-tail" d="M60 54 C69 47, 73 36, 65 32 C60 30, 58 40, 56 49 Z" fill="#E69A58" stroke="#4A3222" stroke-width="2.2"/>
+      <!-- Thân -->
+      <ellipse cx="42" cy="59" rx="18" ry="13" fill="#F4B171" stroke="#4A3222" stroke-width="2.4"/>
+      <ellipse cx="42" cy="61" rx="11" ry="9" fill="#FFF5EB"/>
+      <!-- Vòng cổ & Huy hiệu VKS -->
+      <path d="M28 50 Q42 56 56 50" stroke="#E05252" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="42" cy="54" r="4" fill="#FFD166" stroke="#4A3222" stroke-width="1.6"/>
+      <!-- Tai trái & phải -->
+      <path d="M22 28 C12 24, 11 40, 20 44 C24 45, 27 36, 26 30 Z" fill="#D9823B" stroke="#4A3222" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M58 28 C68 24, 69 40, 60 44 C56 45, 53 36, 54 30 Z" fill="#D9823B" stroke="#4A3222" stroke-width="2.4" stroke-linejoin="round"/>
+      <!-- Đầu -->
+      <ellipse cx="40" cy="34" rx="20" ry="17" fill="#F7BC7E" stroke="#4A3222" stroke-width="2.4"/>
+      <!-- Mảng lông trắng quanh mõm -->
+      <ellipse cx="40" cy="39" rx="13" ry="10" fill="#FFF7F0"/>
+      <!-- Má hồng -->
+      <ellipse cx="26" cy="39" rx="3.8" ry="2.3" fill="#FF9AA2" opacity="0.75"/>
+      <ellipse cx="54" cy="39" rx="3.8" ry="2.3" fill="#FF9AA2" opacity="0.75"/>
+      <!-- Mắt long lanh -->
+      <circle cx="32" cy="32" r="3.4" fill="#2B1E16"/>
+      <circle cx="31" cy="30.8" r="1.2" fill="#FFF"/>
+      <circle cx="48" cy="32" r="3.4" fill="#2B1E16"/>
+      <circle cx="47" cy="30.8" r="1.2" fill="#FFF"/>
+      <!-- Mũi & Miệng cười + Lưỡi hồng -->
+      <ellipse cx="40" cy="37" rx="3.5" ry="2.5" fill="#3B2314"/>
+      <path d="M36 41 Q40 44 44 41" stroke="#3B2314" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M38 42.2 Q40 47.5 42 42.2 Z" fill="#FF758F" stroke="#3B2314" stroke-width="1.3"/>
+      <!-- Kính lúp thám tử nhỏ cầm ở chân -->
+      <circle cx="22" cy="58" r="6.5" fill="#D2EBFF" fill-opacity="0.8" stroke="#231F42" stroke-width="2.2"/>
+      <line x1="17" y1="63" x2="12" y2="68" stroke="#231F42" stroke-width="2.8" stroke-linecap="round"/>
+    </svg>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="./vksBrowserEngine.js"></script>
 <script src="./app.js"></script>

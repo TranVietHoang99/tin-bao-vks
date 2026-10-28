@@ -2773,3 +2773,150 @@ function downloadThongKePdf(){
 function runFormatSheet(){
   exportExcelFile();
 }
+
+// ═══ TRỢ LÝ TÌM KIẾM: CHÚ CHÓ PHƯƠNG HUỆ ═══
+function togglePhuongHueDog(forceMin) {
+  const w = document.getElementById('dogAssistantWidget');
+  const btn = document.getElementById('phDogMinBtn');
+  if (!w) return;
+  const isMin = typeof forceMin === 'boolean' ? forceMin : !w.classList.contains('minimized');
+  w.classList.toggle('minimized', isMin);
+  if (btn) btn.textContent = isMin ? '＋' : '−';
+  if (!isMin) {
+    setTimeout(() => document.getElementById('phDogInput')?.focus(), 100);
+  }
+}
+
+function clearPhuongHueSearch() {
+  const inp = document.getElementById('phDogInput');
+  if (inp) inp.value = '';
+  onPhuongHueSearch('');
+}
+
+function onPhuongHueSearch(rawVal) {
+  const q = String(rawVal || '').trim().toLowerCase();
+  const clrBtn = document.getElementById('phDogClear');
+  const resBox = document.getElementById('phDogResults');
+  if (clrBtn) clrBtn.style.display = q ? 'block' : 'none';
+
+  // Đồng bộ ô tìm kiếm trên bảng chính nếu đang ở trang danh sách tin báo
+  const mainSearch = document.getElementById('searchInput');
+  if (mainSearch && !['thongke', 'chitieu', 'kiennghi'].includes(curView)) {
+    mainSearch.value = rawVal.replace(/^#/, '');
+    onFilter();
+  }
+
+  if (!resBox) return;
+  if (!q) {
+    resBox.classList.remove('show');
+    resBox.innerHTML = '';
+    return;
+  }
+
+  const sttQuery = q.startsWith('#') ? q.slice(1).trim() : null;
+  const matches = (allRec || []).filter(r => {
+    if (sttQuery) return String(r['STT'] || '').toLowerCase() === sttQuery;
+    const fields = [
+      '#' + (r['STT'] || ''),
+      r['STT'],
+      r['Loại tội'],
+      r['Phân loại'],
+      r['Họ và tên'],
+      r['Địa chỉ cá nhân / Cơ quan tổ chức'],
+      r['Nơi xảy ra'],
+      r['Tóm tắt nội dung sự việc'],
+      r['Họ tên Kiểm sát viên thụ lý'],
+      r['Họ tên Phó viện trưởng thụ lý'],
+      r['Kết quả giải quyết'],
+      r['Ngày VKS thụ lý'],
+      r['Ghi chú vụ việc']
+    ];
+    return fields.some(f => String(f || '').toLowerCase().includes(q));
+  });
+
+  resBox.classList.add('show');
+  if (!matches.length) {
+    resBox.innerHTML = `<div style="text-align:center;padding:12px;color:#64748b;font-size:12px">🐶 Gâu! Phương Huệ chưa đánh hơi thấy tin báo nào khớp với "<b>${escH(rawVal)}</b>".</div>`;
+    return;
+  }
+
+  const topList = matches.slice(0, 10);
+  resBox.innerHTML =
+    `<div style="font-size:11px;font-weight:700;color:#8267f0;margin-bottom:6px">🐾 Phương Huệ tìm thấy ${matches.length} kết quả:</div>` +
+    topList.map(r => {
+      const stMap = {
+        dagiaiquyet: '<span class="badge b-green" style="font-size:9.5px">Đã GQ</span>',
+        kkthethoihieu: '<span class="badge b-amber" style="font-size:9.5px">KKT hết TH</span>',
+        tamdinh: '<span class="badge b-purple" style="font-size:9.5px">TĐC</span>',
+        phuchoi: '<span class="badge b-blue" style="font-size:9.5px">Phục hồi</span>',
+        dangcho: '<span class="badge b-amber" style="font-size:9.5px">Đang chờ</span>'
+      };
+      const badge = stMap[r._trangThai] || '';
+      return `<div class="ph-res-item" onclick="openDetail(${r.rowIndex})">
+        <div class="ph-res-top">
+          <span>#${escH(r['STT'])} · ${escH(r['Loại tội'] || 'Chưa rõ tội danh')}</span>
+          ${badge}
+        </div>
+        <div class="ph-res-sub">📍 ${escH(r['Nơi xảy ra'] || '—')} · 👤 KSV: ${escH(r['Họ tên Kiểm sát viên thụ lý'] || '—')}</div>
+        <div class="ph-res-sub">${escH(r['Tóm tắt nội dung sự việc'] || '')}</div>
+      </div>`;
+    }).join('');
+}
+
+function phuongHueQuickFilter(mode) {
+  const resBox = document.getElementById('phDogResults');
+  if (mode === 'thongke') {
+    navToKey('thongke');
+    toast('🐶 Phương Huệ đã mở trang Thống kê cho bạn!');
+    return;
+  }
+  if (mode === 'dangcho' || mode === 'tamdinh') {
+    navToKey(mode);
+    toast(mode === 'dangcho' ? '🐶 Đã lọc các tin Đang chờ giải quyết!' : '🐶 Đã lọc các tin Tạm đình chỉ!');
+    return;
+  }
+  if (mode === 'cax') {
+    navToKey('tonghop');
+    const caxList = (allRec || []).filter(r => r['Công an xã thụ lý'] === 'Có');
+    if (resBox) {
+      resBox.classList.add('show');
+      resBox.innerHTML = `<div style="font-size:11px;font-weight:700;color:#8267f0;margin-bottom:6px">🐾 Có ${caxList.length} tin do Công an xã thụ lý:</div>` +
+        caxList.slice(0, 12).map(r => `<div class="ph-res-item" onclick="openDetail(${r.rowIndex})">
+          <div class="ph-res-top"><span>#${escH(r['STT'])} · ${escH(r['Loại tội'] || '')}</span><span class="badge b-blue" style="font-size:9.5px">CAX</span></div>
+          <div class="ph-res-sub">📍 ${escH(r['Nơi xảy ra'] || '—')} · KSV: ${escH(r['Họ tên Kiểm sát viên thụ lý'] || '—')}</div>
+        </div>`).join('');
+    }
+    return;
+  }
+  if (mode === 'quahan') {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const warnItems = [];
+    (allRec || []).forEach(r => {
+      if (r._trangThai === 'dagiaiquyet' || r._trangThai === 'kkthethoihieu' || r._trangThai === 'tamdinh') return;
+      const startStr = (r._trangThai === 'phuchoi' && r._ngayPhucHoiCuoi) ? r._ngayPhucHoiCuoi : (r['Ngày CSĐT thụ lý'] || r['Ngày VKS thụ lý']);
+      const dt = dpParseVal(startStr);
+      if (!dt) return;
+      const elapsed = Math.floor((today - dt) / 864e5);
+      const gh = +(r['Số ngày gia hạn'] || 0);
+      const limit = r._trangThai === 'phuchoi' ? 30 : (60 + gh);
+      const rem = limit - elapsed;
+      if (rem <= 10) warnItems.push({ r, rem });
+    });
+    warnItems.sort((a, b) => a.rem - b.rem);
+    if (resBox) {
+      resBox.classList.add('show');
+      if (!warnItems.length) {
+        resBox.innerHTML = `<div style="text-align:center;padding:10px;color:#16a34a;font-size:12px;font-weight:700">🐶 Tuyệt vời! Không có tin báo nào sắp hết hạn hoặc quá hạn!</div>`;
+      } else {
+        resBox.innerHTML = `<div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:6px">🐾 Có ${warnItems.length} tin cần chú ý thời hạn:</div>` +
+          warnItems.map(({ r, rem }) => `<div class="ph-res-item" onclick="openDetail(${r.rowIndex})">
+            <div class="ph-res-top">
+              <span>#${escH(r['STT'])} · ${escH(r['Loại tội'] || '')}</span>
+              <span class="badge ${rem < 0 ? 'b-red' : 'b-amber'}" style="font-size:9.5px">${rem < 0 ? 'Quá hạn ' + Math.abs(rem) + 'n' : 'Còn ' + rem + 'n'}</span>
+            </div>
+            <div class="ph-res-sub">👤 KSV: ${escH(r['Họ tên Kiểm sát viên thụ lý'] || '—')} · 📍 ${escH(r['Nơi xảy ra'] || '—')}</div>
+          </div>`).join('');
+      }
+    }
+  }
+}
