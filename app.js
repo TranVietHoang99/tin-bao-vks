@@ -2940,3 +2940,230 @@ function phuongHueQuickFilter(mode) {
     }
   }
 }
+
+
+// ═══ CƠ CHẾ TỰ ĐỘNG LƯU (AUTO-SAVE NHƯ GOOGLE SHEETS / DOCS) ═══
+let _autoSaveTimer = null;
+let _autoSaveInFlight = false;
+const DRAFT_KEY_TINBAO = 'vks_draft_tinbao_v5';
+
+function setAutoSaveBadge_(state, msg) {
+  const el = document.getElementById('autoSaveStatus');
+  if (!el) return;
+  if (state === 'saving') {
+    el.style.background = '#fef3c7'; el.style.color = '#b45309'; el.style.borderColor = '#fde68a';
+    el.textContent = '🔄 ' + (msg || 'Đang tự động lưu...');
+  } else if (state === 'draft') {
+    el.style.background = '#e0f2fe'; el.style.color = '#0369a1'; el.style.borderColor = '#bae6fd';
+    el.textContent = '📝 ' + (msg || 'Đã tự lưu nháp (Điền đủ thông tin sẽ tự lưu lên Cloud)');
+  } else {
+    el.style.background = '#dcfce7'; el.style.color = '#15803d'; el.style.borderColor = '#86efac';
+    const t = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    el.textContent = '✅ ' + (msg || ('Đã tự động lưu (' + t + ')'));
+  }
+}
+
+function collectCurrentFormRecord_() {
+  const gv = id => (document.getElementById(id)?.value || '').trim();
+  return {
+    'Ngày VKS thụ lý': gv('f_ngay'),
+    'Ngày CSĐT thụ lý': gv('f_ngay_csdt'),
+    'Thời điểm tính số liệu': gv('f_thoidiemphatsinh'),
+    'Công an xã thụ lý': document.getElementById('f_caxathuly')?.checked ? 'Có' : '',
+    'Phân loại': gv('f_phanloai'),
+    'Loại tội': gv('f_loaitoi'),
+    'Ngày xảy ra': gv('f_ngay_xayra'),
+    'Nơi xảy ra': gv('f_noi_xayra'),
+    'Họ và tên': gv('f_hoten'),
+    'Địa chỉ cá nhân / Cơ quan tổ chức': gv('f_diachi'),
+    'Tóm tắt nội dung sự việc': gv('f_tomtat'),
+    'Họ tên Phó viện trưởng thụ lý': gv('f_pvt'),
+    'Họ tên Kiểm sát viên thụ lý': gv('f_ksv'),
+    'QĐ gia hạn thời hạn giải quyết': buildGH(),
+    'Số ngày gia hạn': gv('f_giahan_ngayso'),
+    'Danh sách QĐ tạm đình chỉ / phục hồi': JSON.stringify((tdphItems || []).map(({loai,so,ngay,lydo,thoiHieu,ngayTSL})=>({loai,so,ngay,lydo:lydo||'',thoiHieu:thoiHieu||'',ngayTSL:ngayTSL||''}))),
+    'Yêu cầu KT/KKT (loại)': gv('f_yeucau_loai'),
+    'Yêu cầu KT/KKT (số QĐ)': gv('f_yeucau_so'),
+    'Yêu cầu KT/KKT (ngày QĐ)': gv('f_yeucau_ngay'),
+    'Kết quả giải quyết': buildKQStr(true),
+    'Ngày TSL kết quả': gv('f_ketqua_ngayTSL'),
+    'Ghi chú vụ việc': gv('f_ghichu_vv'),
+    'Hậu quả - Người chết': gv('f_hq_chet'),
+    'Hậu quả - Người bị thương': gv('f_hq_thuong'),
+    'Hậu quả - Thiệt hại tài sản': gv('f_hq_taisan'),
+    'Hậu quả - Ghi chú khác': gv('f_hq_khac'),
+  };
+}
+
+function isAddFormReadyToAutoCommit_() {
+  const gv = id => (document.getElementById(id)?.value || '').trim();
+  const reqIds = ['f_ngay','f_phanloai','f_loaitoi','f_ngay_xayra','f_noi_xayra','f_pvt','f_ksv','f_tomtat'];
+  return reqIds.every(id => !!gv(id));
+}
+
+function triggerFormAutoSave_() {
+  const ovl = document.getElementById('formOverlay');
+  if (!ovl || !ovl.classList.contains('show')) return;
+
+  const rec = collectCurrentFormRecord_();
+
+  // Nếu đang ở chế độ Thêm mới và chưa điền đủ 8 trường bắt buộc -> Lưu nháp tức thì vào máy
+  if (!editRow && !isAddFormReadyToAutoCommit_()) {
+    try {
+      localStorage.setItem(DRAFT_KEY_TINBAO, JSON.stringify({
+        rec,
+        tdphItems,
+        giahan_so: document.getElementById('f_giahan_so')?.value || '',
+        giahan_ngay: document.getElementById('f_giahan_ngay')?.value || ''
+      }));
+      const rstBtn = document.getElementById('btnResetDraft');
+      if (rstBtn) rstBtn.style.display = '';
+      setAutoSaveBadge_('draft');
+    } catch (e) {}
+    return;
+  }
+
+  // Đã có editRow (đang sửa) HOẶC đã điền đủ thông tin tin mới -> Tự động lưu thẳng vào Database & Cloud!
+  setAutoSaveBadge_('saving');
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => {
+    if (_autoSaveInFlight || _saving) return;
+    _autoSaveInFlight = true;
+    const latestRec = collectCurrentFormRecord_();
+
+    if (editRow) {
+      latestRec['STT'] = allRec.find(r => r.rowIndex === editRow)?.['STT'];
+      google.script.run
+        .withSuccessHandler(() => {
+          _autoSaveInFlight = false;
+          setAutoSaveBadge_('ok');
+          // Cập nhật ngầm bảng phía sau mà không đóng form
+          google.script.run.withSuccessHandler(d => {
+            allRec = d; updCounts(); buildCharts(); buildWarnPanel(); applyView();
+          }).getAllRecords();
+        })
+        .withFailureHandler(() => { _autoSaveInFlight = false; })
+        .updateRecord(editRow, latestRec);
+    } else {
+      // Tự động tạo bản ghi mới và chuyển sang chế độ sửa trực tiếp bản ghi đó
+      google.script.run
+        .withSuccessHandler(res => {
+          _autoSaveInFlight = false;
+          localStorage.removeItem(DRAFT_KEY_TINBAO);
+          const rstBtn = document.getElementById('btnResetDraft');
+          if (rstBtn) rstBtn.style.display = 'none';
+          if (res && res.rowIndex) {
+            editRow = res.rowIndex;
+            document.getElementById('formIcon').textContent = '✏️';
+            document.getElementById('formTitle').textContent = 'Đang sửa Tin Báo #' + (res.stt || '');
+          }
+          setAutoSaveBadge_('ok', 'Đã tự tạo & lưu hồ sơ #' + (res?.stt || '') + ' lên Cloud');
+          google.script.run.withSuccessHandler(d => {
+            allRec = d; updCounts(); buildCharts(); buildWarnPanel(); applyView();
+          }).getAllRecords();
+        })
+        .withFailureHandler(() => { _autoSaveInFlight = false; })
+        .addRecord(latestRec);
+    }
+  }, 650);
+}
+
+function resetFormDraft() {
+  localStorage.removeItem(DRAFT_KEY_TINBAO);
+  editRow = null;
+  clrForm();
+  document.getElementById('f_ngay').value = dpFmt(new Date());
+  const rstBtn = document.getElementById('btnResetDraft');
+  if (rstBtn) rstBtn.style.display = 'none';
+  setAutoSaveBadge_('ok', 'Đã xóa trắng form');
+}
+
+// Khôi phục bản nháp khi mở form Thêm mới & xóa nháp khi bấm Lưu thủ công
+(function initAutoSaveHooks_() {
+  const origOpenAdd = window.openAddModal;
+  window.openAddModal = function() {
+    origOpenAdd();
+    const rawDraft = localStorage.getItem(DRAFT_KEY_TINBAO);
+    const rstBtn = document.getElementById('btnResetDraft');
+    if (rawDraft) {
+      try {
+        const d = JSON.parse(rawDraft);
+        const rec = d.rec || {};
+        const hasContent = Object.keys(rec).some(k => k !== 'Ngày VKS thụ lý' && rec[k]);
+        if (hasContent) {
+          const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
+          set('f_ngay', rec['Ngày VKS thụ lý'] || dpFmt(new Date()));
+          set('f_ngay_csdt', rec['Ngày CSĐT thụ lý']);
+          set('f_thoidiemphatsinh', rec['Thời điểm tính số liệu']);
+          document.getElementById('f_caxathuly').checked = rec['Công an xã thụ lý'] === 'Có';
+          set('f_phanloai', rec['Phân loại']); set('f_loaitoi', rec['Loại tội']);
+          set('f_ngay_xayra', rec['Ngày xảy ra']); set('f_noi_xayra', rec['Nơi xảy ra']);
+          set('f_hoten', rec['Họ và tên']); set('f_diachi', rec['Địa chỉ cá nhân / Cơ quan tổ chức']);
+          set('f_tomtat', rec['Tóm tắt nội dung sự việc']);
+          set('f_pvt', rec['Họ tên Phó viện trưởng thụ lý']); set('f_ksv', rec['Họ tên Kiểm sát viên thụ lý']);
+          set('f_giahan_so', d.giahan_so || ''); set('f_giahan_ngay', d.giahan_ngay || '');
+          set('f_giahan_ngayso', rec['Số ngày gia hạn']);
+          set('f_yeucau_loai', rec['Yêu cầu KT/KKT (loại)']);
+          set('f_yeucau_so', rec['Yêu cầu KT/KKT (số QĐ)']);
+          set('f_yeucau_ngay', rec['Yêu cầu KT/KKT (ngày QĐ)']);
+          set('f_ketqua_ngayTSL', rec['Ngày TSL kết quả']);
+          set('f_ghichu_vv', rec['Ghi chú vụ việc']);
+          set('f_hq_chet', rec['Hậu quả - Người chết']);
+          set('f_hq_thuong', rec['Hậu quả - Người bị thương']);
+          set('f_hq_taisan', rec['Hậu quả - Thiệt hại tài sản']);
+          set('f_hq_khac', rec['Hậu quả - Ghi chú khác']);
+          if (Array.isArray(d.tdphItems)) { tdphItems = d.tdphItems; renderTDPHList(); }
+          if (rstBtn) rstBtn.style.display = '';
+          setAutoSaveBadge_('draft', 'Đã khôi phục bản nháp đang gõ dở');
+          return;
+        }
+      } catch (e) {}
+    }
+    if (rstBtn) rstBtn.style.display = 'none';
+    setAutoSaveBadge_('ok', 'Tự động lưu đang bật');
+  };
+
+  const origOpenEdit = window.openEdit;
+  window.openEdit = function(ri) {
+    origOpenEdit(ri);
+    const rstBtn = document.getElementById('btnResetDraft');
+    if (rstBtn) rstBtn.style.display = 'none';
+    setAutoSaveBadge_('ok', 'Gõ đến đâu tự lưu đến đó');
+  };
+
+  const origSaveRecord = window.saveRecord;
+  window.saveRecord = function() {
+    localStorage.removeItem(DRAFT_KEY_TINBAO);
+    origSaveRecord();
+  };
+
+  // Lắng nghe mọi thao tác gõ phím, chọn menu, chọn ngày trong formOverlay
+  document.addEventListener('input', function(e) {
+    if (e.target && e.target.closest && e.target.closest('#formOverlay')) {
+      triggerFormAutoSave_();
+    }
+  });
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.closest && e.target.closest('#formOverlay')) {
+      triggerFormAutoSave_();
+    }
+  });
+
+  // Bắt sự kiện khi chọn ngày từ lịch popup (selectDP) hoặc thêm/xóa QĐ TĐC/PH
+  const origSelectDP = window.selectDP;
+  if (typeof origSelectDP === 'function') {
+    window.selectDP = function(...args) {
+      origSelectDP(...args);
+      triggerFormAutoSave_();
+    };
+  }
+  const origRenderTDPH = window.renderTDPHList;
+  if (typeof origRenderTDPH === 'function') {
+    window.renderTDPHList = function(...args) {
+      origRenderTDPH(...args);
+      if (document.getElementById('formOverlay')?.classList.contains('show')) {
+        triggerFormAutoSave_();
+      }
+    };
+  }
+})();

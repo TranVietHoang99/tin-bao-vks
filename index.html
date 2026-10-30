@@ -753,7 +753,7 @@ select.fc{background:#fafbff;cursor:pointer}
 <div class="overlay" id="formOverlay">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-head-title"><span id="formIcon">📝</span><span id="formTitle">Thêm Tin Báo Mới</span></div>
+      <div class="modal-head-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span id="formIcon">📝</span><span id="formTitle">Thêm Tin Báo Mới</span><span id="autoSaveStatus" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#dcfce7;color:#15803d;border:1px solid #86efac">⚡ Tự động lưu đang bật</span></div>
       <button class="modal-x" onclick="closeOvl('formOverlay')">×</button>
     </div>
     <div class="modal-body">
@@ -1025,7 +1025,7 @@ select.fc{background:#fafbff;cursor:pointer}
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeOvl('formOverlay')">Hủy</button>
+      <button class="btn btn-ghost" id="btnResetDraft" onclick="resetFormDraft()" style="margin-right:auto;display:none" title="Xóa nội dung nháp để nhập mới từ đầu">🧹 Xóa trắng form</button><button class="btn btn-ghost" onclick="closeOvl('formOverlay')">Đóng</button>
       <button class="btn btn-primary" onclick="saveRecord()">💾 Lưu hồ sơ</button>
     </div>
   </div>
