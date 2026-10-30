@@ -493,6 +493,7 @@ select.fc{background:#fafbff;cursor:pointer}
       <span class="page-pill pp-blue" id="tbPill"></span>
     </div>
     <div class="topbar-right">
+      <span id="cloudSyncBadge" onclick="pullCloudNow()" title="Trạng thái đồng bộ Cloud (Bấm để đồng bộ ngay)" style="font-size:11px;font-weight:700;padding:5px 10px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px">☁️ Đã đồng bộ</span>
       <span id="activeYearBadge" onclick="openYearSwitchPrompt()" title="Bấm để chuyển đổi năm làm việc" style="font-size:11px;font-weight:700;padding:5px 10px;background:#e0f2fe;color:#0369a1;border-radius:8px;cursor:pointer;display:none"></span>
       <button class="btn btn-ghost" onclick="exportExcelFile()" title="Tải về file Excel (.xlsx) đã tô màu nền theo tháng & màu chữ theo trạng thái" style="font-size:11px;padding:6px 10px;color:#15803d;border-color:#86efac;background:#f0fdf4">📥 Xuất Excel</button>
       <button class="btn btn-ghost" onclick="openDataSyncModal()" title="Nhập dữ liệu từ file Excel (.xlsx) hoặc Google Sheets" style="font-size:11px;padding:6px 10px;color:#0369a1">📤 Nhập Excel / Sao lưu</button>

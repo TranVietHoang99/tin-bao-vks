@@ -2,6 +2,21 @@
 let vksToken = localStorage.getItem('vks_auth_token') || '';
 const IS_STATIC_WEB = location.hostname.endsWith('github.io') || location.protocol === 'file:';
 
+const MUTATE_METHODS = new Set(['addRecord','updateRecord','deleteRecord','addChiTieu','updateChiTieu','deleteChiTieu','addKienNghi','updateKienNghi','deleteKienNghi','updateStaffLists','setActiveYear','ketThucNam','khoiTaoSheetTamDinhChi','runMigration']);
+
+function updateTopbarSyncBadge(state, text) {
+  const el = document.getElementById('cloudSyncBadge');
+  if (!el) return;
+  if (state === 'syncing') {
+    el.style.background = '#fef3c7'; el.style.color = '#b45309'; el.style.borderColor = '#fde68a';
+    el.innerHTML = '🔄 ' + (text || 'Đang lưu Cloud...');
+  } else {
+    el.style.background = '#dcfce7'; el.style.color = '#15803d'; el.style.borderColor = '#86efac';
+    const t = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    el.innerHTML = '☁️ ' + (text || ('Đã lưu Cloud (' + t + ')'));
+  }
+}
+
 function createGScriptRunner(successCb = null, failureCb = null) {
   return new Proxy({}, {
     get(_, prop) {
@@ -19,6 +34,8 @@ function createGScriptRunner(successCb = null, failureCb = null) {
             .catch(err => { if (failureCb) failureCb(err); else console.error(err); });
           return;
         }
+        const isMut = MUTATE_METHODS.has(prop);
+        if (isMut) updateTopbarSyncBadge('syncing');
         fetch('/api/rpc', {
           method: 'POST',
           headers: {
@@ -36,7 +53,10 @@ function createGScriptRunner(successCb = null, failureCb = null) {
             if (!r.ok || data.error) throw new Error(data.error || data.message || 'Lỗi máy chủ');
             return data.result;
           })
-          .then(res => { if (successCb) successCb(res); })
+          .then(res => {
+            if (isMut) setTimeout(() => updateTopbarSyncBadge('ok'), 600);
+            if (successCb) successCb(res);
+          })
           .catch(err => { if (failureCb) failureCb(err); else console.error(err); });
       };
     }

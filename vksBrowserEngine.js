@@ -1,6 +1,6 @@
 // ============================================================
-//  VKS BROWSER ENGINE (Chạy trực tiếp trên Web GitHub Pages)
-//  Đồng bộ tự động 2 chiều với kho lưu trữ riêng tư GitHub
+//  VKS BROWSER ENGINE v5.2 (Zero-Cache + Anti-Data-Loss Sync)
+//  Đồng bộ tự động 2 chiều tức thì với kho lưu trữ riêng tư GitHub
 // ============================================================
 (function(window) {
   const ENCRYPTED_GH_TOKEN = "111c22332de4e78fbc0f56795fec84b9ce13094f71a6c7b694344e4f1af3ccdfbfed1b3857259ad9";
@@ -19,6 +19,28 @@
       out += String.fromCharCode(bytes[i] ^ kCode ^ ((i * 31) & 0xff));
     }
     return out;
+  }
+
+  function setSyncBadge_(state, text) {
+    const el = document.getElementById("cloudSyncBadge");
+    if (!el) return;
+    if (state === "syncing") {
+      el.style.background = "#fef3c7";
+      el.style.color = "#b45309";
+      el.style.borderColor = "#fde68a";
+      el.innerHTML = "🔄 " + (text || "Đang lưu lên Cloud...");
+    } else if (state === "error") {
+      el.style.background = "#fee2e2";
+      el.style.color = "#dc2626";
+      el.style.borderColor = "#fecaca";
+      el.innerHTML = "⚠️ " + (text || "Chờ đồng bộ (Bấm thử lại)");
+    } else {
+      el.style.background = "#dcfce7";
+      el.style.color = "#15803d";
+      el.style.borderColor = "#86efac";
+      const nowStr = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      el.innerHTML = "☁️ " + (text || ("Đã lưu Cloud (" + nowStr + ")"));
+    }
   }
 
 
@@ -64,11 +86,13 @@ const DEFAULT_PHO_VT_LIST = [
 const DEFAULT_KSV_LIST = [
   "Nguyễn Trung Kiên","Bùi Thị Mai","Trần Ngọc Diệp","Lê Hiệp Thương",
   "Đinh Thị Liên","Đinh Thị Thu Huyền","Trần Thu Hằng","Lê Thùy Linh",
-  "Nguyễn Trần Hiếu","Bùi Thị Thu Hà","Nguyễn Vũ Trung"
+  "Nguyễn Trần Hiếu","Bùi Thị Thu Hà","Nguyễn Vũ Trung","Trần Việt Hoàng"
 ];
 
 
   let db = {
+    updatedAt: 0,
+    revision: 0,
     properties: { ACTIVE_YEAR: "2026" },
     staff: {
       phoVTList: [...DEFAULT_PHO_VT_LIST],
@@ -89,7 +113,9 @@ const DEFAULT_KSV_LIST = [
 
   let _unlockedGhToken = sessionStorage.getItem("vks_gh_token") || localStorage.getItem("vks_gh_token") || "";
   let _lastFileSha = "";
-  let _syncTimer = null;
+  let _syncInFlight = false;
+  let _syncPending = false;
+  let _hasLoadedData = false;
 
   function loadFromLocalStorage_() {
     try {
@@ -98,21 +124,138 @@ const DEFAULT_KSV_LIST = [
         const parsed = JSON.parse(raw);
         if (parsed && parsed.sheets) {
           db = { ...db, ...parsed };
+          const activeRows = db.sheets["DanhSachTinBao_" + (db.properties?.ACTIVE_YEAR || "2026")] || [];
+          if (activeRows.length > 0) _hasLoadedData = true;
         }
       }
     } catch (e) {}
   }
   loadFromLocalStorage_();
 
-  async function pullFromGitHubCloud() {
-    if (!_unlockedGhToken) return { success: false, message: "Chưa mở khóa kết nối Cloud." };
+  // Cảnh báo nếu người dùng đóng tab ngay trong lúc đang đẩy dữ liệu lên Cloud
+  window.addEventListener("beforeunload", function(e) {
+    if (_syncInFlight || localStorage.getItem("vks_dirty_sync") === "1") {
+      e.preventDefault();
+      e.returnValue = "Dữ liệu đang được đồng bộ lên Cloud, vui lòng chờ 1 giây...";
+    }
+  });
+
+  async function pushToGitHubCloudNow() {
+    if (!_unlockedGhToken || !_hasLoadedData) return { success: false, message: "Chưa sẵn sàng đẩy Cloud" };
+    if (_syncInFlight) {
+      _syncPending = true;
+      return { success: true, message: "Đang xếp hàng đồng bộ..." };
+    }
+    _syncInFlight = true;
+    setSyncBadge_("syncing", "Đang lưu lên Cloud...");
+
     try {
-      const apiUrl = "https://api.github.com/repos/" + GH_DATA_REPO + "/contents/" + GH_DATA_PATH + "?t=" + Date.now();
+      const apiUrl = "https://api.github.com/repos/" + GH_DATA_REPO + "/contents/" + GH_DATA_PATH;
+      // Luôn lấy SHA mới nhất từ commit đầu nhánh main để tránh lỗi 409 Conflict và tránh cache
+      const refRes = await fetch("https://api.github.com/repos/" + GH_DATA_REPO + "/commits/main?t=" + Date.now(), {
+        headers: {
+          "Authorization": "Bearer " + _unlockedGhToken,
+          "Cache-Control": "no-cache"
+        },
+        cache: "no-store"
+      });
+      let refParam = "?t=" + Date.now();
+      if (refRes.ok) {
+        const refData = await refRes.json();
+        if (refData && refData.sha) refParam = "?ref=" + refData.sha;
+      }
+      const getRes = await fetch(apiUrl + refParam, {
+        headers: {
+          "Authorization": "Bearer " + _unlockedGhToken,
+          "Cache-Control": "no-cache"
+        },
+        cache: "no-store"
+      });
+      if (getRes.ok) {
+        const info = await getRes.json();
+        if (info && info.sha) _lastFileSha = info.sha;
+      }
+
+      const jsonStr = JSON.stringify(db, null, 2);
+      const bytes = new TextEncoder().encode(jsonStr);
+      let bin = "";
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const contentB64 = btoa(bin);
+      const ts = new Date().toLocaleString("vi-VN");
+
+      const putRes = await fetch(apiUrl, {
+        method: "PUT",
+        headers: {
+          "Authorization": "Bearer " + _unlockedGhToken,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: "Web Auto-Sync VKS data (" + ts + ")",
+          content: contentB64,
+          ...(_lastFileSha ? { sha: _lastFileSha } : {})
+        })
+      });
+
+      if (!putRes.ok) {
+        throw new Error("GitHub HTTP " + putRes.status);
+      }
+
+      const putData = await putRes.json();
+      if (putData.content && putData.content.sha) {
+        _lastFileSha = putData.content.sha;
+      }
+      db.cloud.lastSync = new Date().toISOString();
+      localStorage.setItem("vks_browser_db", JSON.stringify(db));
+      localStorage.setItem("vks_dirty_sync", "0");
+      setSyncBadge_("ok");
+      return { success: true, message: "Đã lưu lên Cloud thành công!" };
+    } catch (e) {
+      console.warn("Auto-Sync error:", e);
+      setSyncBadge_("error", "Chưa lưu Cloud (Bấm thử lại)");
+      return { success: false, message: e.message };
+    } finally {
+      _syncInFlight = false;
+      if (_syncPending) {
+        _syncPending = false;
+        pushToGitHubCloudNow();
+      }
+    }
+  }
+
+  async function pullFromGitHubCloud(forceOverwrite) {
+    if (!_unlockedGhToken) return { success: false, message: "Chưa mở khóa kết nối Cloud." };
+
+    // NẾU trên máy đang có dữ liệu mới vừa nhập mà chưa kịp đẩy lên Cloud -> ĐẨY LÊN TRƯỚC, TUYỆT ĐỐI KHÔNG GHI ĐÈ!
+    if (!forceOverwrite && localStorage.getItem("vks_dirty_sync") === "1" && _hasLoadedData) {
+      await pushToGitHubCloudNow();
+      return { success: true, message: "Đã đồng bộ dữ liệu vừa nhập lên Cloud!" };
+    }
+
+    setSyncBadge_("syncing", "Đang kiểm tra Cloud...");
+    try {
+      // B1: Lấy SHA của commit mới nhất trên nhánh main (vượt qua 100% bộ nhớ đệm 60s của GitHub CDN)
+      const refRes = await fetch("https://api.github.com/repos/" + GH_DATA_REPO + "/commits/main?t=" + Date.now(), {
+        headers: {
+          "Authorization": "Bearer " + _unlockedGhToken,
+          "Cache-Control": "no-cache"
+        },
+        cache: "no-store"
+      });
+      let refParam = "?t=" + Date.now();
+      if (refRes.ok) {
+        const refData = await refRes.json();
+        if (refData && refData.sha) refParam = "?ref=" + refData.sha;
+      }
+
+      // B2: Tải nội dung file theo đúng SHA commit mới nhất
+      const apiUrl = "https://api.github.com/repos/" + GH_DATA_REPO + "/contents/" + GH_DATA_PATH + refParam;
       const res = await fetch(apiUrl, {
         headers: {
           "Authorization": "Bearer " + _unlockedGhToken,
-          "Accept": "application/vnd.github.v3+json"
-        }
+          "Accept": "application/vnd.github.v3+json",
+          "Cache-Control": "no-cache"
+        },
+        cache: "no-store"
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const meta = await res.json();
@@ -122,7 +265,17 @@ const DEFAULT_KSV_LIST = [
       for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
       const jsonText = new TextDecoder("utf-8").decode(bytes);
       const parsed = JSON.parse(jsonText);
+
       if (parsed && parsed.sheets) {
+        const localTs = +(db.updatedAt || 0);
+        const cloudTs = +(parsed.updatedAt || 0);
+
+        // Nếu dữ liệu trong trình duyệt mới hơn trên Cloud -> không ghi đè mà đẩy bản mới hơn lên Cloud
+        if (!forceOverwrite && _hasLoadedData && localTs > cloudTs) {
+          await pushToGitHubCloudNow();
+          return { success: true, message: "Đã giữ dữ liệu mới nhất và đồng bộ lên Cloud!" };
+        }
+
         db = {
           ...db,
           ...parsed,
@@ -133,71 +286,34 @@ const DEFAULT_KSV_LIST = [
           },
           sheets: parsed.sheets
         };
+        _hasLoadedData = true;
         db.cloud.lastSync = new Date().toISOString();
         localStorage.setItem("vks_browser_db", JSON.stringify(db));
-        return { success: true, message: "Đã đồng bộ dữ liệu mới nhất từ GitHub Cloud!" };
+        localStorage.setItem("vks_dirty_sync", "0");
+        setSyncBadge_("ok", "Đã đồng bộ Cloud");
+        return { success: true, updated: cloudTs > localTs, message: "Đã đồng bộ dữ liệu mới nhất từ GitHub Cloud!" };
       }
       return { success: false, message: "Dữ liệu trên Cloud trống." };
     } catch (e) {
+      setSyncBadge_("error", "Lỗi mạng Cloud");
       return { success: false, message: "Lỗi đồng bộ Cloud: " + e.message };
     }
   }
 
-  function pushToGitHubCloudAsync_() {
-    if (!_unlockedGhToken) return;
-    if (_syncTimer) clearTimeout(_syncTimer);
-    _syncTimer = setTimeout(async () => {
-      try {
-        const apiUrl = "https://api.github.com/repos/" + GH_DATA_REPO + "/contents/" + GH_DATA_PATH;
-        if (!_lastFileSha) {
-          const getRes = await fetch(apiUrl, {
-            headers: { "Authorization": "Bearer " + _unlockedGhToken }
-          });
-          if (getRes.ok) {
-            const info = await getRes.json();
-            _lastFileSha = info.sha;
-          }
-        }
-        const jsonStr = JSON.stringify(db, null, 2);
-        const bytes = new TextEncoder().encode(jsonStr);
-        let bin = "";
-        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        const contentB64 = btoa(bin);
-        const ts = new Date().toLocaleString("vi-VN");
-        const putRes = await fetch(apiUrl, {
-          method: "PUT",
-          headers: {
-            "Authorization": "Bearer " + _unlockedGhToken,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: "Web Auto-Sync VKS data (" + ts + ")",
-            content: contentB64,
-            ...(_lastFileSha ? { sha: _lastFileSha } : {})
-          })
-        });
-        if (putRes.ok) {
-          const putData = await putRes.json();
-          if (putData.content && putData.content.sha) {
-            _lastFileSha = putData.content.sha;
-          }
-          db.cloud.lastSync = new Date().toISOString();
-        }
-      } catch (e) {
-        console.warn("Auto-Sync warning:", e);
-      }
-    }, 1500);
-  }
-
   function saveLocalDB() {
+    db.updatedAt = Date.now();
+    db.revision = (+(db.revision || 0)) + 1;
+    _hasLoadedData = true;
     try {
       localStorage.setItem("vks_browser_db", JSON.stringify(db));
+      localStorage.setItem("vks_dirty_sync", "1");
     } catch (e) {}
-    pushToGitHubCloudAsync_();
+    // Đẩy ngay lập tức lên GitHub Cloud (không chờ 1.5s)
+    pushToGitHubCloudNow();
   }
 
   async function pullFromSupabase() {
-    return await pullFromGitHubCloud();
+    return await pullFromGitHubCloud(true);
   }
 
   async function loginOnWeb(username, password) {
@@ -215,6 +331,16 @@ const DEFAULT_KSV_LIST = [
     }
     return { success: false, message: "Mật khẩu hoặc tài khoản không đúng!" };
   }
+
+  // Tự động kiểm tra dữ liệu mới khi người dùng chuyển lại tab hoặc mỗi 25 giây
+  window.addEventListener("focus", async function() {
+    if (_unlockedGhToken && !_syncInFlight && localStorage.getItem("vks_dirty_sync") !== "1") {
+      const r = await pullFromGitHubCloud();
+      if (r && r.updated && typeof window.loadData === "function") {
+        window.loadData();
+      }
+    }
+  });
 
 // ── Tiện ích Ngày tháng ─────────────────────────────────────
 function fmtDate_(d) {
@@ -1864,10 +1990,12 @@ function updatePassword(oldPass, newPass, newUsername) {
 }
 
 
+
   window.vksBrowserEngine = {
     isReady: () => !!_unlockedGhToken,
     loginOnWeb,
     pullFromGitHubCloud,
+    pushToGitHubCloudNow,
     getAllRecords,
     addRecord,
     updateRecord,
